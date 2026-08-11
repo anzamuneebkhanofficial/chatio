@@ -1,39 +1,34 @@
 'use client';
 
 /**
- * ChatWidget — Reusable AI Chatbot Component
+ * ChatWidget — High-Performance, Ultra-Responsive AI Chatbot Component
  *
- * Drop-in chatbot widget for any Next.js website.
- * Self-contained: zero external dependencies beyond Next.js/React.
- *
- * FEATURES:
- *   Smart Switch Mode  — Gemini vs Groq race, first wins
- *   Knowledge base     — reads website-specific data from .md / .json / URL
- *   Session memory     — full chat history sent with each message
- *   Voice input        — Web Speech API (browser native)
- *   Text-to-speech     — speechSynthesis API (browser native)
- *   Provider badge     — shows which AI answered
- *   File import panel  — train with any file or URL (built-in)
- *   Responsive         — works on all screen sizes
- *
- * HOW TO REUSE IN ANY PROJECT:
- *   1. Copy the entire ChatBot/ folder to your components/
- *   2. Copy src/app/api/chat/route.js → your app/api/chat/
- *   3. Copy src/app/api/train/route.js → your app/api/train/
- *   4. Set GROQ_API_KEY + GEMINI_API_KEY in .env.local
- *   5. Set KNOWLEDGE_MD_PATH pointing to your .md file
- *   7. <ChatWidget botName="Your Bot" /> — done!
+ * Designed for Muhammad Anza Muneeb Khan AI Assistant.
+ * Features:
+ *   - Gold/Yellow Aesthetics matching UI design
+ *   - Guardrail verification (Portfolio scope protection)
+ *   - Resilient multi-layer error handling (429, 500, network loss)
+ *   - Zero-lag input state updates
+ *   - Smart auto-scroll without scroll lock
+ *   - Quick-action suggestion chips
+ *   - Feedback buttons (Thumbs Up / Down / TTS)
  */
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import styles from './ChatWidget.module.css';
+import { checkGuardrails } from '../lib/guardrails';
 
-// ─── Inline SVG Icons (zero icon library dependency) ─────────────────────────
+// ─── Inline SVG Icons ────────────────────────────────────────────────────────
 
 const Ico = {
   Chat: () => (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+    </svg>
+  ),
+  Sparkle: () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 0L14.59 9.41L24 12L14.59 14.59L12 24L9.41 14.59L0 12L9.41 9.41L12 0Z" />
     </svg>
   ),
   Close: () => (
@@ -42,8 +37,8 @@ const Ico = {
     </svg>
   ),
   Send: () => (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" />
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
     </svg>
   ),
   Mic: ({ on }) => (
@@ -53,50 +48,34 @@ const Ico = {
     </svg>
   ),
   Volume: () => (
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
       <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" />
     </svg>
   ),
   Stop: () => (
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <rect x="6" y="6" width="12" height="12" rx="2" />
     </svg>
   ),
   Trash: () => (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
     </svg>
   ),
-  Bot: () => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="11" width="18" height="11" rx="2" />
-      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-      <circle cx="9" cy="16" r="1" fill="currentColor" stroke="none" />
-      <circle cx="15" cy="16" r="1" fill="currentColor" stroke="none" />
+  ThumbUp: ({ active }) => (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill={active ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" />
     </svg>
   ),
-  Upload: () => (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-      <polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" />
-    </svg>
-  ),
-  Link: () => (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-    </svg>
-  ),
-  Check: () => (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="20 6 9 17 4 12" />
+  ThumbDown: ({ active }) => (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill={active ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-3" />
     </svg>
   ),
 };
 
-// ─── Text Renderer (converts plain AI text to clean HTML) ─────────────────────
-// Handles numbered lists, line breaks, and Source: URL → clickable link.
+// ─── Text Renderer ────────────────────────────────────────────────────────────
 
 function renderText(text) {
   if (!text) return '';
@@ -115,7 +94,7 @@ function renderText(text) {
       continue;
     }
 
-    // Source: URL line — render as clickable link that opens in new tab
+    // Source citation line
     const sourceMatch = trimmed.match(/^Source:\s*(https?:\/\/\S+)$/i);
     if (sourceMatch) {
       if (inNumberedList) { html += '</ol>'; inNumberedList = false; }
@@ -124,28 +103,42 @@ function renderText(text) {
       continue;
     }
 
-    // Numbered list: "1. Item" or "1) Item"
+    // Numbered list items
     const numberedMatch = trimmed.match(/^(\d+)[.)]\s+(.+)/);
     if (numberedMatch) {
       if (!inNumberedList) { html += '<ol>'; inNumberedList = true; }
-      html += `<li>${escapeHtml(numberedMatch[2])}</li>`;
+      html += `<li>${formatInline(numberedMatch[2])}</li>`;
       continue;
     }
 
     if (inNumberedList) { html += '</ol>'; inNumberedList = false; }
 
-    // "First:" / "Second:" / "Third:" labels
-    const labelMatch = trimmed.match(/^(First|Second|Third|Fourth|Fifth|Finally|Note|Important):\s*(.+)/i);
-    if (labelMatch) {
-      html += `<p><strong>${labelMatch[1]}:</strong> ${escapeHtml(labelMatch[2])}</p>`;
+    // Bullet points
+    const bulletMatch = trimmed.match(/^[-•*]\s+(.+)/);
+    if (bulletMatch) {
+      html += `<p style="margin-left: 12px;">• ${formatInline(bulletMatch[1])}</p>`;
       continue;
     }
 
-    html += `<p>${escapeHtml(trimmed)}</p>`;
+    // Labels / Headings
+    const labelMatch = trimmed.match(/^(First|Second|Third|Fourth|Fifth|Finally|Note|Important|Scope Notice|Topics I can help you with):\s*(.*)/i);
+    if (labelMatch) {
+      html += `<p><strong>${labelMatch[1]}:</strong> ${formatInline(labelMatch[2])}</p>`;
+      continue;
+    }
+
+    html += `<p>${formatInline(trimmed)}</p>`;
   }
 
   if (inNumberedList) html += '</ol>';
   return html;
+}
+
+function formatInline(str) {
+  let escaped = escapeHtml(str);
+  // Bold formatting **text** -> <strong>text</strong>
+  escaped = escaped.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  return escaped;
 }
 
 function escapeHtml(str) {
@@ -155,8 +148,6 @@ function escapeHtml(str) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
 }
-
-// ─── Format timestamp safely (client-only) ────────────────────────────────────
 
 function formatTime(date) {
   if (!date) return '';
@@ -173,24 +164,37 @@ function makeWelcome(botName) {
   return {
     id: 'init',
     role: 'assistant',
-    content: `Hello! I am ${botName}.\n\nI am trained to answer questions about this website. How can I help you today?`,
+    content: `Hello! I am ${botName}.\n\nI can help answer questions about Muhammad Anza Muneeb Khan's skills, software engineering projects, AI RAG solutions, video courses, services, and booking consultations. How can I assist you today?`,
     timestamp: null,
     provider: null,
   };
 }
 
 function makeMsg(role, content, provider = null) {
-  return { id: `${role}-${Date.now()}-${Math.random()}`, role, content, timestamp: new Date(), provider };
+  return {
+    id: `${role}-${Date.now()}-${Math.random()}`,
+    role,
+    content,
+    timestamp: new Date(),
+    provider,
+    liked: false,
+    disliked: false,
+  };
 }
+
+const SUGGESTIONS = [
+  { label: '🚀 Featured Projects', prompt: "What are Muhammad Anza Muneeb Khan's featured software engineering projects?" },
+  { label: '💻 AI & Web Services', prompt: 'What AI & Web services do you provide?' },
+  { label: '🧠 Tech Stack & Skills', prompt: 'What is your tech stack & core skills?' },
+  { label: '📅 Book a Consultation', prompt: 'How can I book a consultation with Anza?' },
+];
 
 // ─── ChatWidget Component ─────────────────────────────────────────────────────
 
 export default function ChatWidget({
-  botName = 'AI Assistant',
+  botName = 'Muhammad Anza Muneeb Khan AI Assistant',
   apiEndpoint = '/api/chat',
-  trainEndpoint = '/api/train',
 }) {
-  // ── State ──────────────────────────────────────────────────────────────────
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState(() => [makeWelcome(botName)]);
   const [input, setInput] = useState('');
@@ -201,15 +205,12 @@ export default function ChatWidget({
   const [newMsgAlert, setNewMsgAlert] = useState(false);
   const [isQueued, setIsQueued] = useState(false);
 
-  // Refs
+  const messagesContainerRef = useRef(null);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
-  const fileInputRef = useRef(null);
   const recognitionRef = useRef(null);
 
-  // ── Effects ─────────────────────────────────────────────────────────────────
-
-  // Fix hydration — run only on client
+  // Client hydration check
   useEffect(() => {
     setHasMounted(true);
     setMessages((prev) =>
@@ -217,42 +218,51 @@ export default function ChatWidget({
     );
   }, []);
 
-  // Auto-scroll messages
-  useEffect(() => {
-    if (isOpen) {
-      // Use requestAnimationFrame for smoother scrolling without layout thrashing
+  // Smart Auto-Scroll: scroll down only if user is near bottom or sending message
+  const scrollToBottom = useCallback((force = false) => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 140;
+
+    if (force || isNearBottom) {
       requestAnimationFrame(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
       });
     }
-  }, [messages, isLoading, isOpen]);
+  }, []);
 
-  // Focus input on open
+  useEffect(() => {
+    if (isOpen) {
+      scrollToBottom();
+    }
+  }, [messages, isLoading, isOpen, scrollToBottom]);
+
+  // Focus input when widget opens
   useEffect(() => {
     if (isOpen) {
       setNewMsgAlert(false);
-      setTimeout(() => inputRef.current?.focus(), 200);
+      setTimeout(() => inputRef.current?.focus(), 180);
     }
   }, [isOpen]);
 
-  // Auto-grow textarea
+  // Auto-grow textarea without layout thrashing
   useEffect(() => {
     const el = inputRef.current;
     if (!el) return;
-    el.style.height = 'auto'; // Reset height to calculate new height
-    el.style.height = `${Math.min(el.scrollHeight, 120)}px`; // Max height 120px
+    el.style.height = 'auto';
+    el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
   }, [input]);
 
-  // ── Send Message ────────────────────────────────────────────────────────────
+  // ── Send Message Logic ──────────────────────────────────────────────────────
 
   const sendMessage = useCallback(async (textOverride) => {
     const text = (textOverride ?? input).trim();
     if (!text) return;
-    
-    // Prevent overlapping sends; just queue the UI interaction
+
     if (isLoading) {
       setIsQueued(true);
-      setTimeout(() => setIsQueued(false), 500);
+      setTimeout(() => setIsQueued(false), 400);
       return;
     }
 
@@ -261,6 +271,19 @@ export default function ChatWidget({
     setMessages(history);
     setInput('');
     setIsLoading(true);
+    scrollToBottom(true);
+
+    // High-Level Guardrails Validation
+    const guardrail = checkGuardrails(text);
+    if (guardrail.isOffTopic) {
+      setTimeout(() => {
+        const warningMsg = makeMsg('assistant', guardrail.warningResponse, 'Guardrail');
+        setMessages((prev) => [...prev, warningMsg]);
+        setIsLoading(false);
+        if (!isOpen) setNewMsgAlert(true);
+      }, 300);
+      return;
+    }
 
     const payload = history.map((m) => ({ role: m.role, content: m.content }));
 
@@ -271,29 +294,66 @@ export default function ChatWidget({
         body: JSON.stringify({ messages: payload }),
       });
 
-      const data = await res.json();
+      const data = await res.json().catch(() => null);
 
-      if (!res.ok || data.error) throw new Error(data.error ?? `Server error ${res.status}`);
+      if (!res.ok) {
+        let userFacingError = 'An error occurred while getting the response.';
+        if (res.status === 429) {
+          userFacingError = '⚠️ Rate Limit Reached: You are sending messages too quickly. Please wait 60 seconds before sending more.';
+        } else if (res.status === 500) {
+          userFacingError = data?.error || '⚠️ Server Error: The AI service encountered an issue. Please try again shortly.';
+        } else if (data?.error) {
+          userFacingError = `⚠️ ${data.error}`;
+        }
 
-      const botMsg = makeMsg('assistant', data.text || 'No response received.', data.provider);
+        const errorMsg = makeMsg('assistant', userFacingError, null);
+        errorMsg.isError = true;
+        setMessages((prev) => [...prev, errorMsg]);
+        return;
+      }
+
+      if (!data || (!data.text && !data.error)) {
+        throw new Error('Invalid response payload received from server.');
+      }
+
+      if (data.error) {
+        const errorMsg = makeMsg('assistant', `⚠️ ${data.error}`, null);
+        errorMsg.isError = true;
+        setMessages((prev) => [...prev, errorMsg]);
+        return;
+      }
+
+      const botMsg = makeMsg('assistant', data.text, data.provider);
       setMessages((prev) => [...prev, botMsg]);
       if (!isOpen) setNewMsgAlert(true);
     } catch (err) {
-      const errMsg = makeMsg('assistant', `⚠️ ${err.message}`, null);
+      console.error('[ChatWidget] Error sending message:', err);
+      let networkError = '⚠️ Network Error: Unable to connect to the AI server. Please check your internet connection and try again.';
+      if (err.message && !err.message.includes('object')) {
+        networkError = `⚠️ ${err.message}`;
+      }
+      const errMsg = makeMsg('assistant', networkError, null);
       errMsg.isError = true;
       setMessages((prev) => [...prev, errMsg]);
     } finally {
       setIsLoading(false);
     }
-  }, [input, isLoading, messages, isOpen, apiEndpoint]);
+  }, [input, isLoading, messages, isOpen, apiEndpoint, scrollToBottom]);
 
   // ── Voice Input ─────────────────────────────────────────────────────────────
 
   const toggleVoice = useCallback(() => {
     const SR = typeof window !== 'undefined' && (window.SpeechRecognition || window.webkitSpeechRecognition);
-    if (!SR) { alert('Voice input is not supported in this browser.'); return; }
+    if (!SR) {
+      alert('Voice input is not supported in this browser.');
+      return;
+    }
 
-    if (isListening) { recognitionRef.current?.stop(); setIsListening(false); return; }
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+      return;
+    }
 
     const rec = new SR();
     recognitionRef.current = rec;
@@ -301,7 +361,10 @@ export default function ChatWidget({
     rec.onstart = () => setIsListening(true);
     rec.onend = () => setIsListening(false);
     rec.onerror = () => setIsListening(false);
-    rec.onresult = (e) => setInput((prev) => (prev ? `${prev} ${e.results[0][0].transcript}` : e.results[0][0].transcript));
+    rec.onresult = (e) => {
+      const transcript = e.results[0][0].transcript;
+      setInput((prev) => (prev ? `${prev} ${transcript}` : transcript));
+    };
     rec.start();
   }, [isListening]);
 
@@ -309,15 +372,35 @@ export default function ChatWidget({
 
   const speak = useCallback((text) => {
     if (!('speechSynthesis' in window)) return;
-    if (window.speechSynthesis.speaking) { window.speechSynthesis.cancel(); setIsSpeaking(false); return; }
-    const utter = new SpeechSynthesisUtterance(text);
+    if (window.speechSynthesis.speaking) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+      return;
+    }
+    const cleanText = text.replace(/<[^>]*>/g, '').replace(/[*#]/g, '');
+    const utter = new SpeechSynthesisUtterance(cleanText);
     const voices = window.speechSynthesis.getVoices();
-    const best = voices.find((v) => v.name.includes('Google') || v.name.includes('Samantha'));
+    const best = voices.find((v) => v.name.includes('Google') || v.name.includes('Samantha') || v.lang.startsWith('en'));
     if (best) utter.voice = best;
     utter.onstart = () => setIsSpeaking(true);
     utter.onend = () => setIsSpeaking(false);
     utter.onerror = () => setIsSpeaking(false);
     window.speechSynthesis.speak(utter);
+  }, []);
+
+  // ── Feedback Handlers ───────────────────────────────────────────────────────
+
+  const toggleLike = useCallback((msgId, type) => {
+    setMessages((prev) =>
+      prev.map((m) => {
+        if (m.id !== msgId) return m;
+        if (type === 'like') {
+          return { ...m, liked: !m.liked, disliked: false };
+        } else {
+          return { ...m, disliked: !m.disliked, liked: false };
+        }
+      })
+    );
   }, []);
 
   // ── Clear Chat ──────────────────────────────────────────────────────────────
@@ -326,26 +409,28 @@ export default function ChatWidget({
     setMessages([{ ...makeWelcome(botName), timestamp: new Date() }]);
   }, [botName]);
 
-  // ── Keyboard ────────────────────────────────────────────────────────────────
+  // ── Keyboard handling ───────────────────────────────────────────────────────
 
   const onKeyDown = useCallback((e) => {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
   }, [sendMessage]);
 
-  // ─── Render ──────────────────────────────────────────────────────────────────
+  // ── Render ──────────────────────────────────────────────────────────────────
 
   return (
     <div className={styles.root}>
-
       {/* ── FAB Toggle Button ── */}
       <button
         id="chatwidget-open-btn"
         className={`${styles.fab} ${isOpen ? styles.fabHidden : ''}`}
         onClick={() => setIsOpen(true)}
         aria-label="Open AI Chat"
-        title="Chat with AI"
+        title="Chat with Muhammad Anza Muneeb Khan AI Assistant"
       >
-        <Ico.Chat />
+        <Ico.Sparkle />
         {newMsgAlert && <span className={styles.alertDot} />}
       </button>
 
@@ -356,39 +441,37 @@ export default function ChatWidget({
         aria-modal="true"
         aria-label="AI Chat"
       >
-
         {/* Header */}
         <div className={styles.header}>
           <div className={styles.headerInfo}>
             <div className={styles.avatarWrap}>
-              <span className={styles.avatar}><Ico.Bot /></span>
+              <span className={styles.avatar}><Ico.Sparkle /></span>
               <span className={styles.onlineDot} />
             </div>
             <div>
               <p className={styles.botName}>{botName}</p>
               <p className={styles.botMeta}>
                 <span className={styles.pulseDot} />
-                Online · Smart Switch AI
+                Online · Muhammad Anza Muneeb Khan AI Assistant
               </p>
             </div>
           </div>
           <div className={styles.headerBtns}>
-            <button className={styles.hBtn} onClick={clearChat} title="Clear chat">
+            <button className={styles.hBtn} onClick={clearChat} title="Clear chat history">
               <Ico.Trash />
             </button>
-            <button className={styles.hBtn} onClick={() => setIsOpen(false)} title="Close">
+            <button className={styles.hBtn} onClick={() => setIsOpen(false)} title="Close chat window">
               <Ico.Close />
             </button>
           </div>
         </div>
 
-        {/* Messages */}
-        <div className={styles.messages} id="chatwidget-messages">
+        {/* Messages Container */}
+        <div className={styles.messages} id="chatwidget-messages" ref={messagesContainerRef}>
           {messages.map((msg) => (
             <div key={msg.id} className={`${styles.row} ${msg.role === 'user' ? styles.rowUser : styles.rowBot}`}>
-
               {msg.role === 'assistant' && (
-                <div className={styles.msgAvatar}><Ico.Bot /></div>
+                <div className={styles.msgAvatar}><Ico.Sparkle /></div>
               )}
 
               <div className={`${styles.bubble} ${msg.role === 'user' ? styles.bubbleUser : styles.bubbleBot} ${msg.isError ? styles.bubbleError : ''}`}>
@@ -405,31 +488,61 @@ export default function ChatWidget({
                   <span className={styles.metaTime} suppressHydrationWarning>
                     {hasMounted ? formatTime(msg.timestamp) : ''}
                   </span>
-                  {msg.provider && (
-                    <span className={styles.providerTag}>
-                      {msg.provider === 'groq' ? '⚡ Groq' : '✨ Gemini'}
-                    </span>
-                  )}
+
                   {msg.role === 'assistant' && !msg.isError && (
-                    <button className={styles.ttsBtn} onClick={() => speak(msg.content)} title="Read aloud">
-                      {isSpeaking ? <Ico.Stop /> : <Ico.Volume />}
-                    </button>
+                    <div className={styles.actionGroup}>
+                      <button
+                        className={`${styles.actionBtn} ${msg.liked ? styles.actionBtnActive : ''}`}
+                        onClick={() => toggleLike(msg.id, 'like')}
+                        title="Helpful response"
+                      >
+                        <Ico.ThumbUp active={msg.liked} />
+                      </button>
+                      <button
+                        className={`${styles.actionBtn} ${msg.disliked ? styles.actionBtnActive : ''}`}
+                        onClick={() => toggleLike(msg.id, 'dislike')}
+                        title="Not helpful"
+                      >
+                        <Ico.ThumbDown active={msg.disliked} />
+                      </button>
+                      <button
+                        className={styles.actionBtn}
+                        onClick={() => speak(msg.content)}
+                        title="Read aloud"
+                      >
+                        {isSpeaking ? <Ico.Stop /> : <Ico.Volume />}
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>
             </div>
           ))}
 
-          {/* Typing indicator */}
+          {/* Typing Indicator */}
           {isLoading && (
             <div className={`${styles.row} ${styles.rowBot}`}>
-              <div className={styles.msgAvatar}><Ico.Bot /></div>
+              <div className={styles.msgAvatar}><Ico.Sparkle /></div>
               <div className={`${styles.bubble} ${styles.bubbleBot} ${styles.typing}`}>
                 <span /><span /><span />
               </div>
             </div>
           )}
           <div ref={messagesEndRef} />
+        </div>
+
+        {/* Suggestion Chips */}
+        <div className={styles.chipsContainer}>
+          {SUGGESTIONS.map((chip, idx) => (
+            <button
+              key={idx}
+              className={styles.chipBtn}
+              onClick={() => sendMessage(chip.prompt)}
+              disabled={isLoading}
+            >
+              {chip.label}
+            </button>
+          ))}
         </div>
 
         {/* Input Area */}
@@ -442,10 +555,9 @@ export default function ChatWidget({
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={onKeyDown}
-              placeholder={isListening ? 'Listening...' : 'Type your message...'}
+              placeholder={isListening ? 'Listening...' : "Ask anything about Muhammad Anza Muneeb Khan's..."}
               disabled={isLoading}
               aria-label="Message input"
-              style={{ overflowY: input.split('\n').length > 5 || (inputRef.current && inputRef.current.scrollHeight > 120) ? 'auto' : 'hidden' }}
             />
             <div className={styles.inputActions}>
               <button
@@ -460,13 +572,13 @@ export default function ChatWidget({
                 className={`${styles.sendBtn} ${isQueued ? styles.sendBtnQueued : ''}`}
                 onClick={() => sendMessage()}
                 disabled={!input.trim()}
-                aria-label="Send"
+                aria-label="Send Message"
               >
                 <Ico.Send />
               </button>
             </div>
           </div>
-          <p className={styles.inputHint}>Powered by Smart Switch AI · Enter to send</p>
+          <p className={styles.inputHint}>POWERED BY MUHAMMAD ANZA MUNEEB KHAN · ENTER TO SEND</p>
         </div>
       </div>
     </div>

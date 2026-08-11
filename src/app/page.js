@@ -146,7 +146,7 @@ export default function Home() {
       </footer>
 
       {/* ── Chatbot ── */}
-      <ChatWidget botName="MyBot Assistant" />
+      <ChatWidget botName="Muhammad Anza Muneeb Khan AI Assistant" />
     </main>
   );
 }
