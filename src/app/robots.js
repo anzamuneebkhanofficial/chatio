@@ -1,5 +1,5 @@
 export default function robots() {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://chatiobyanza.com';
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://chatio-ivory.vercel.app';
 
   return {
     rules: [

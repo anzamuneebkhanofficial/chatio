@@ -2,10 +2,13 @@ import { ClerkProvider } from '@clerk/nextjs';
 import './globals.css';
 import { Toaster } from 'sonner';
 
-const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://chatiobyanza.com';
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://chatio-ivory.vercel.app';
 
 export const metadata = {
   metadataBase: new URL(baseUrl),
+  verification: {
+    google: '4r4KsnlwhjqpIR5F10TPAaNm3V_pw-cbZrned_6uicg',
+  },
   title: {
     default: 'Chatio by Anza - 100% Free Universal Custom RAG AI Chatbot Platform',
     template: '%s | Chatio by Anza',
