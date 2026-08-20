@@ -88,8 +88,18 @@ export default function Home() {
                 <Shield className="w-4 h-4 text-emerald-400" /> {isAdminLoggedIn ? 'Admin Dashboard' : 'Admin'}
               </Link>
             )}
-            <Link href="https://github.com/anzamuneebkhanofficial/RAG_ChatBot_Langchain" target="_blank" className="text-sm font-medium text-slate-300 hover:text-white transition-colors flex items-center gap-1.5">
-              <GitBranch className="w-4 h-4 text-cyan-400" /> GitHub
+            <Link
+              href="https://github.com/anzamuneebkhanofficial/chatio"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm font-medium text-slate-300 hover:text-white transition-all flex items-center gap-1.5 group px-2 py-1 rounded-lg hover:bg-white/5"
+              title="Get 100% Free Open-Source Code on GitHub"
+            >
+              <GitBranch className="w-4 h-4 text-cyan-400 group-hover:rotate-12 transition-transform" />
+              <span>GitHub</span>
+              <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded-full bg-cyan-500/10 text-cyan-300 border border-cyan-500/20">
+                Free Code
+              </span>
             </Link>
           </nav>
           
@@ -149,8 +159,19 @@ export default function Home() {
               </Link>
             )}
 
-            <Link href="https://github.com/anzamuneebkhanofficial/RAG_ChatBot_Langchain" target="_blank" className="text-sm font-medium text-white flex items-center gap-2 py-1" onClick={() => setMobileMenuOpen(false)}>
-              <GitBranch className="w-4 h-4 text-cyan-400" /> GitHub
+            <Link
+              href="https://github.com/anzamuneebkhanofficial/chatio"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm font-medium text-white flex items-center justify-between py-1.5 px-1 rounded-lg hover:bg-white/5"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              <span className="flex items-center gap-2">
+                <GitBranch className="w-4 h-4 text-cyan-400" /> GitHub Source Code
+              </span>
+              <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-300 border border-cyan-500/20">
+                100% Free
+              </span>
             </Link>
             <div className="h-px bg-white/10 w-full my-1"></div>
             {!mounted || !isLoaded ? (
@@ -425,8 +446,14 @@ export default function Home() {
             </span>
           </div>
           <div className="flex items-center gap-6">
-            <Link href="https://github.com/anzamuneebkhanofficial/RAG_ChatBot_Langchain" target="_blank" className="text-sm text-slate-400 hover:text-white transition-colors flex items-center gap-1">
-              <GitBranch className="w-3.5 h-3.5" /> GitHub
+            <Link
+              href="https://github.com/anzamuneebkhanofficial/chatio"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm text-slate-400 hover:text-white transition-colors flex items-center gap-1.5 group"
+            >
+              <GitBranch className="w-3.5 h-3.5 text-cyan-400 group-hover:rotate-12 transition-transform" />
+              <span>GitHub</span>
             </Link>
             <Link href="/dashboard" className="text-sm text-slate-400 hover:text-white transition-colors">
               Dashboard
