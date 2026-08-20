@@ -1,45 +1,63 @@
-import clientPromise from './mongodb';
+import { RateLimiterMemory } from 'rate-limiter-flexible';
 
-export async function checkRateLimit(ip) {
+/**
+ * High-performance In-Memory Rate Limiter powered by rate-limiter-flexible
+ * Protects against DDoS attacks, API flooding, and token depletion.
+ */
+
+// 1. Chat requests limiter: 30 requests per 60 seconds per IP
+const chatRateLimiter = new RateLimiterMemory({
+  points: 30, // 30 requests
+  duration: 60, // per 60 seconds
+  blockDuration: 60, // Block for 60s if consumed
+});
+
+// 2. Auth attempts limiter: 10 login attempts per 60 seconds per IP (Anti Brute-Force)
+const authRateLimiter = new RateLimiterMemory({
+  points: 10,
+  duration: 60,
+  blockDuration: 120, // Block for 2 minutes if 10 consecutive failed attempts
+});
+
+/**
+ * Check rate limit for chat requests
+ * @param {string} ip - Client IP address
+ * @returns {Promise<{ limited: boolean, remainingPoints: number, retryAfter: number }>}
+ */
+export async function checkRateLimit(ip = '127.0.0.1') {
   try {
-    const client = await clientPromise;
-    const db = client.db();
-    const collection = db.collection('rate_limits');
-
-    const now = new Date();
-    const resetAt = new Date(now.getTime() + 60000); // 1 minute from now
-
-    // Increment count by 1, or set initial if it doesn't exist
-    const result = await collection.findOneAndUpdate(
-      { ip: ip },
-      {
-        $inc: { count: 1 },
-        $setOnInsert: { resetAt: resetAt }
-      },
-      { upsert: true, returnDocument: 'after' }
-    );
-
-    const doc = result?.value || result;
-    
-    if (!doc) {
-      return { limited: false, count: 1 };
+    const res = await chatRateLimiter.consume(ip);
+    return {
+      limited: false,
+      remainingPoints: res.remainingPoints,
+      retryAfter: 0,
+    };
+  } catch (rejRes) {
+    if (rejRes instanceof Error) {
+      console.warn('[RateLimiter] Error:', rejRes.message);
+      return { limited: false, remainingPoints: 1, retryAfter: 0 };
     }
+    // Rejection means points consumed (Rate limit exceeded)
+    const retrySecs = Math.round((rejRes.msBeforeNext || 60000) / 1000);
+    return {
+      limited: true,
+      remainingPoints: 0,
+      retryAfter: retrySecs,
+    };
+  }
+}
 
-    const isLimited = doc.count > 20;
-
-    // Manual cleanup in case TTL index hasn't run yet, but the time has passed
-    if (doc.resetAt < now) {
-      await collection.updateOne(
-        { ip: ip },
-        { $set: { count: 1, resetAt: resetAt } }
-      );
-      return { limited: false, count: 1 };
-    }
-
-    return { limited: isLimited, count: doc.count };
-  } catch (error) {
-    console.error('Rate limit error:', error);
-    // Fail open if db is down
-    return { limited: false, count: 0 };
+/**
+ * Check rate limit for authentication routes
+ * @param {string} ip - Client IP address
+ * @returns {Promise<{ limited: boolean, retryAfter: number }>}
+ */
+export async function checkAuthRateLimit(ip = '127.0.0.1') {
+  try {
+    await authRateLimiter.consume(ip);
+    return { limited: false, retryAfter: 0 };
+  } catch (rejRes) {
+    const retrySecs = Math.round((rejRes.msBeforeNext || 120000) / 1000);
+    return { limited: true, retryAfter: retrySecs };
   }
 }

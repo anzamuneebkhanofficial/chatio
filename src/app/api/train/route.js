@@ -1,35 +1,21 @@
-/**
- * POST /api/train
- *
- * Trains the chatbot with new knowledge data.
- * Supports: .md file, .txt file, .json file, plain URL (deep crawl streaming), or raw text.
- */
-
 import { NextResponse } from 'next/server';
-import { clearKnowledgeCache, setKnowledgeContext } from '@/components/ChatBot/lib/knowledgeLoader';
+import { auth } from '@clerk/nextjs/server';
+import { isMasterOwnerRequest } from '@/lib/ownerAuth';
+import dbConnect from '@/lib/dbConnect';
+import { UserConfig } from '@/models';
+import { setKnowledgeContext, clearKnowledgeCache } from '@/components/ChatBot/lib/knowledgeLoader';
 import { crawlWebsite } from '@/components/ChatBot/lib/crawler';
+import { saveKnowledge } from '@/lib/multiUserDb';
+import { invalidateResponseCache } from '@/components/ChatBot/lib/responseCache';
 
-// ─── Authorization Helper ──────────────────────────────────────────────────────
-function isAuthorized(req) {
-  const adminSecret = process.env.ADMIN_SECRET;
-  if (!adminSecret) return false; // Fails closed if not set
-
-  const authHeader = req.headers.get('authorization') || '';
-  const token = authHeader.replace(/^Bearer\s+/i, '').trim();
-
-  return token === adminSecret;
-}
-
-// ─── Helper: Parse JSON knowledge into readable text ─────────────────────────
 function jsonToText(raw) {
   let data;
   try {
     data = typeof raw === 'string' ? JSON.parse(raw) : raw;
   } catch {
-    return raw; // Not valid JSON, return as-is
+    return raw;
   }
 
-  // Q&A array: [{question, answer}] or [{q, a}]
   if (Array.isArray(data)) {
     const isQA = data[0]?.question || data[0]?.q;
     if (isQA) {
@@ -41,22 +27,17 @@ function jsonToText(raw) {
         })
         .join('\n\n---\n\n');
     }
-    // Plain array of strings
     return data.join('\n');
   }
 
-  // Object with qa key
   if (data.qa && Array.isArray(data.qa)) {
     return data.qa
       .map((item) => `Q: ${item.q || item.question}\nA: ${item.a || item.answer}`)
       .join('\n\n---\n\n');
   }
 
-  // Any other JSON — pretty print it (LLMs can read this fine)
   return JSON.stringify(data, null, 2);
 }
-
-// ─── Main Handler ──────────────────────────────────────────────────────────────
 
 export async function GET() {
   return NextResponse.json({ error: 'Method Not Allowed. Please use POST.' }, { status: 405 });
@@ -64,22 +45,26 @@ export async function GET() {
 
 export async function POST(req) {
   try {
-    if (!isAuthorized(req)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const contentType = req.headers.get('content-type') || '';
     let content = '';
     let source = '';
     let format = '';
+    let appId = '';
+    let rawBody = null;
+    let file = null;
 
-    // ── Branch 1: File Upload (multipart/form-data) ────────────────────────
+    // File Upload (multipart/form-data)
     if (contentType.includes('multipart/form-data')) {
       const formData = await req.formData();
-      const file = formData.get('file');
+      file = formData.get('file');
+      appId = formData.get('appId') || '';
 
       if (!file || typeof file === 'string') {
         return NextResponse.json({ error: 'No file provided.' }, { status: 400 });
+      }
+
+      if (file.size > 10 * 1024 * 1024) {
+        return NextResponse.json({ error: 'File size exceeds 10MB limit.' }, { status: 400 });
       }
 
       const fileName = file.name || 'upload';
@@ -105,61 +90,94 @@ export async function POST(req) {
 
       source = `file: ${fileName}`;
     }
-
-    // ── Branch 2: JSON body (url / text / json) ───────────────────────────
+    // JSON body (url / text / json)
     else {
-      let body;
       try {
-        body = await req.json();
+        rawBody = await req.json();
       } catch {
         return NextResponse.json({ error: 'Invalid JSON body.' }, { status: 400 });
       }
+      appId = rawBody.appId || '';
+    }
 
-      if (body.url) {
-        // STREAMING CRAWLER RESPONSE
-        const maxPages = Number(body.maxPages) || 30;
-        const encoder = new TextEncoder();
-        
-        const stream = new ReadableStream({
-          async start(controller) {
-            try {
-              let finalData = '';
-              let finalChars = 0;
+    // ── STRICT AUTHORIZATION SPLITTING ──
+    let authenticatedUserId = null;
 
-              for await (const event of crawlWebsite(body.url.trim(), maxPages)) {
-                // Send SSE event to client
-                controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
+    if (appId) {
+      // 1. User chatbot training — authenticate via Clerk
+      const { userId } = await auth();
+      if (!userId) {
+        return NextResponse.json({ error: 'Unauthorized. Please log in to train your bot.' }, { status: 401 });
+      }
 
-                if (event.type === 'done') {
-                  finalData = event.data;
-                  finalChars = event.chars;
-                }
+      await dbConnect();
+      const userBot = await UserConfig.findOne({ userId, appId });
+      if (!userBot) {
+        return NextResponse.json({ error: 'Forbidden: You do not own this bot.' }, { status: 403 });
+      }
+      authenticatedUserId = userId;
+    } else {
+      // 2. Global platform bot training — authenticate via Master Owner check
+      if (!isMasterOwnerRequest(req)) {
+        return NextResponse.json({ error: 'Unauthorized: Master owner access required for platform training.' }, { status: 401 });
+      }
+    }
+
+    // Handle crawling stream if URL was provided
+    if (rawBody && rawBody.url) {
+      const maxPages = Number(rawBody.maxPages) || 30;
+      const encoder = new TextEncoder();
+      
+      const stream = new ReadableStream({
+        async start(controller) {
+          try {
+            let finalData = '';
+            let finalChars = 0;
+
+            for await (const event of crawlWebsite(rawBody.url.trim(), maxPages)) {
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
+
+              if (event.type === 'done') {
+                finalData = event.data;
+                finalChars = event.chars;
               }
-
-              if (finalChars > 0) {
-                await setKnowledgeContext(finalData.trim());
-              }
-              controller.close();
-            } catch (err) {
-              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'error', message: err.message })}\n\n`));
-              controller.close();
             }
-          }
-        });
 
-        return new NextResponse(stream, {
-          headers: {
-            'Content-Type': 'text/event-stream',
-            'Cache-Control': 'no-cache',
-            'Connection': 'keep-alive',
-          },
-        });
-      } else if (body.text) {
-        content = body.text;
+            if (finalChars > 0) {
+              if (appId) {
+                await saveKnowledge(appId, authenticatedUserId || 'user', finalData.trim());
+                invalidateResponseCache(appId);
+              } else {
+                await setKnowledgeContext(finalData.trim());
+                clearKnowledgeCache();
+                invalidateResponseCache('global');
+              }
+            }
+            controller.close();
+          } catch (err) {
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'error', message: err.message })}\n\n`));
+            controller.close();
+          }
+        }
+      });
+
+      return new NextResponse(stream, {
+        headers: {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive',
+        },
+      });
+    }
+
+    // Handle text or json if not file upload
+    if (!file && rawBody) {
+      if (rawBody.text) {
+        content = rawBody.text;
         source = 'raw text input';
         format = 'text';
-      } else if (body.json) {
-        content = jsonToText(body.json);
+      } else if (rawBody.json) {
+        content = jsonToText(rawBody.json);
         source = 'raw JSON input';
         format = 'json';
       } else {
@@ -170,20 +188,21 @@ export async function POST(req) {
       }
     }
 
-    // ── Validate extracted content (for non-streaming requests) ─────────────────────────
     if (!content || content.trim().length < 20) {
       return NextResponse.json(
-        { error: 'Extracted content is too short to be useful.' },
+        { error: 'Extracted content is too short to be useful (minimum 20 characters).' },
         { status: 400 }
       );
     }
 
-    // ── Write to MongoDB knowledge collection ────────────────────────────────────────────
-    await setKnowledgeContext(content.trim());
-
-    console.log(
-      `[Train API] ✅ Knowledge updated from ${source} (${content.length} chars)`
-    );
+    if (appId) {
+      await saveKnowledge(appId, authenticatedUserId || 'user', content.trim());
+      invalidateResponseCache(appId);
+    } else {
+      await setKnowledgeContext(content.trim());
+      clearKnowledgeCache();
+      invalidateResponseCache('global');
+    }
 
     return NextResponse.json({
       success: true,
@@ -193,7 +212,6 @@ export async function POST(req) {
       preview: content.trim().slice(0, 400) + (content.length > 400 ? '...' : ''),
     });
   } catch (error) {
-    console.error('[Train API] ❌ Error:', error.message);
     return NextResponse.json(
       { error: `Training failed: ${error.message}` },
       { status: 500 }

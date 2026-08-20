@@ -6,13 +6,16 @@
  *  - LangChain GoogleGenerativeAIEmbeddings (@langchain/google-genai)
  *  - LangChain MemoryVectorStore (@langchain/classic/vectorstores/memory)
  *  - MongoDB for persistent raw context storage
+ *  - Isolated Demo knowledge reader for temporary interactive modes
  */
 
-import clientPromise from './mongodb.js';
 import { Document } from '@langchain/core/documents';
 import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
 import { GoogleGenerativeAIEmbeddings } from '@langchain/google-genai';
 import { MemoryVectorStore } from '@langchain/classic/vectorstores/memory';
+import { DEMO_PRESETS } from './demoPresets.js';
+import fs from 'fs';
+import path from 'path';
 
 // ── Module-level caches ────────────────────────────────────────────────────────
 let _cachedContext   = null;
@@ -20,40 +23,97 @@ let _cachedVectorStore = null;
 let _cacheTime       = 0;
 const CACHE_TTL      = 60000;
 
-// ── Load & cache raw knowledge context from MongoDB ─────────────────────────────
+const _demoCache = new Map();
+
+/**
+ * Reads demo-specific knowledge context safely without modifying the database.
+ */
+export async function getDemoKnowledgeContext(demoId) {
+  if (!demoId || !DEMO_PRESETS[demoId]) return null;
+
+  if (_demoCache.has(demoId)) {
+    return _demoCache.get(demoId);
+  }
+
+  try {
+    const fileName = DEMO_PRESETS[demoId].fileName;
+    const filePath = path.join(process.cwd(), 'public', 'demos', fileName);
+    if (fs.existsSync(filePath)) {
+      const content = fs.readFileSync(filePath, 'utf8').trim();
+      _demoCache.set(demoId, content);
+      return content;
+    }
+  } catch (err) {
+    console.error(`[KnowledgeLoader] Error loading demo knowledge for ${demoId}:`, err.message);
+  }
+
+  return null;
+}
+
+// ── Load & cache raw knowledge context from MongoDB or website-data.md ────────
 export async function getKnowledgeContext() {
   const now = Date.now();
   if (_cachedContext !== null && (now - _cacheTime) < CACHE_TTL) {
     return _cachedContext;
   }
 
+  // Load from local website-data.md as default ground truth
+  let defaultFileContent = '';
   try {
-    const client = await clientPromise;
-    const db = client.db();
-    const doc = await db.collection('knowledge').findOne({ type: 'global' });
+    const filePath = path.join(process.cwd(), 'knowledge', 'website-data.md');
+    if (fs.existsSync(filePath)) {
+      defaultFileContent = fs.readFileSync(filePath, 'utf8').trim();
+    }
+  } catch (e) {}
+
+  try {
+    const dbConnect = (await import('@/lib/dbConnect')).default;
+    const { AdminKnowledge } = await import('@/models');
+    await dbConnect();
+    const doc = await AdminKnowledge.findOne({ type: 'global' }).lean();
     
-    if (doc && doc.content) {
-      _cachedContext = doc.content.trim();
+    // Check if doc exists and is genuine Chatio platform data (not leftover demo data)
+    if (doc && doc.content && doc.content.length > 50) {
+      const isDemoData = doc.content.includes('Bella Vista') || doc.content.includes('TechCart') || doc.content.includes('Wellness First') || doc.content.includes('Pixel & Ink');
+      if (!isDemoData) {
+        _cachedContext = doc.content.trim();
+        _cacheTime = now;
+        return _cachedContext;
+      }
+    }
+
+    // If MongoDB had demo data or is empty, restore genuine Chatio manual to MongoDB
+    if (defaultFileContent) {
+      await AdminKnowledge.findOneAndUpdate(
+        { type: 'global' },
+        { $set: { content: defaultFileContent, type: 'global' } },
+        { upsert: true }
+      );
+      _cachedContext = defaultFileContent;
       _cacheTime = now;
-      console.log(`[KnowledgeLoader LangChain] ✅ Loaded raw context from MongoDB`);
       return _cachedContext;
     }
   } catch (err) {
-    console.error(`[KnowledgeLoader LangChain] ❌ Error loading from MongoDB:`, err);
+    console.error(`[KnowledgeLoader LangChain] ❌ Error loading from MongoDB via Mongoose:`, err.message);
   }
-  
-  if (_cachedContext === null) {
-    _cachedContext = '';
+
+  if (defaultFileContent) {
+    _cachedContext = defaultFileContent;
+    _cacheTime = now;
+    return _cachedContext;
   }
+
+  _cachedContext = '';
   return _cachedContext;
 }
 
 export async function setKnowledgeContext(content) {
-  const client = await clientPromise;
-  const db = client.db();
-  await db.collection('knowledge').updateOne(
+  const dbConnect = (await import('@/lib/dbConnect')).default;
+  const { AdminKnowledge } = await import('@/models');
+  await dbConnect();
+  await AdminKnowledge.findOneAndUpdate(
     { type: 'global' },
-    { $set: { content: content, updatedAt: new Date() } },
+    { $set: { content: content, type: 'global' } },
     { upsert: true }
   );
   
@@ -67,6 +127,7 @@ export function clearKnowledgeCache() {
   _cachedContext     = null;
   _cachedVectorStore = null;
   _cacheTime         = 0;
+  _demoCache.clear();
 }
 
 /**
@@ -85,7 +146,7 @@ function getEmbeddings() {
 }
 
 /**
- * Builds or retrieves the cached LangChain Vector Store index.
+ * Builds or retrieves the cached LangChain Vector Store index for global knowledge.
  */
 export async function getVectorStore() {
   if (_cachedVectorStore !== null) {
@@ -99,7 +160,6 @@ export async function getVectorStore() {
     return _cachedVectorStore;
   }
 
-  // Use LangChain RecursiveCharacterTextSplitter
   const splitter = new RecursiveCharacterTextSplitter({
     chunkSize: 1000,
     chunkOverlap: 200,
@@ -107,36 +167,22 @@ export async function getVectorStore() {
   });
 
   const docs = await splitter.createDocuments([fullText]);
-  console.log(`[KnowledgeLoader LangChain] 📦 Created ${docs.length} document chunks using RecursiveCharacterTextSplitter`);
-
   const embeddings = getEmbeddings();
   _cachedVectorStore = await MemoryVectorStore.fromDocuments(docs, embeddings);
   return _cachedVectorStore;
 }
 
 /**
- * Returns a LangChain Vector Store Retriever instance.
- */
-export async function getRetriever(k = 4) {
-  const store = await getVectorStore();
-  return store.asRetriever(k);
-}
-
-/**
  * Retrieves context relevant to the user query using LangChain vector similarity search.
- *
- * @param {string} query    - User's message
- * @param {number} maxChars - Cap for returned context characters
- * @returns {Promise<string>} Relevant text context
+ * Limits chunk payload to ~3500 chars (~800 tokens) to prevent TPM rate limits on Groq free tier.
  */
-export async function getRelevantContext(query, maxChars = 15000) {
+export async function getRelevantContext(query, maxChars = 3500) {
   const fullContext = await getKnowledgeContext();
   if (!fullContext) return '';
-  if (fullContext.length <= maxChars) return fullContext;
 
   try {
     const vectorStore = await getVectorStore();
-    const results = await vectorStore.similaritySearch(query, 5);
+    const results = await vectorStore.similaritySearch(query, 4);
 
     if (!results || results.length === 0) {
       return fullContext.slice(0, maxChars);
@@ -152,8 +198,6 @@ export async function getRelevantContext(query, maxChars = 15000) {
 
     return combined.trim() || fullContext.slice(0, maxChars);
   } catch (err) {
-    console.error(`[KnowledgeLoader LangChain] ⚠️ Similarity search failed (${err.message}). Falling back to raw context slice.`);
     return fullContext.slice(0, maxChars);
   }
 }
-

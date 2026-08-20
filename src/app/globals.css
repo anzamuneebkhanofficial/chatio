@@ -1,105 +1,404 @@
-/**
- * Global Styles — MyBot Demo
- *
- * Dark-mode design system with CSS custom properties.
- * These tokens are available globally and are separate from
- * the ChatWidget's own CSS Module variables.
- */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@400;600;700;800&display=swap');
+@layer base {
+  :root {
+    /* Widget variables for fallback compatibility if needed */
+    --accent: #6366f1;
+    --bg-primary: #080a16;
+  }
 
-/* ─── Reset & Base ───────────────────────────────────────────── */
-*, *::before, *::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+  body {
+    @apply bg-background-primary text-text-primary font-body antialiased;
+    overflow-x: hidden;
+  }
 }
 
-:root {
-  /* Colors */
-  --bg-primary: #080a14;
-  --bg-secondary: #0d1020;
-  --bg-card: #111428;
-  --bg-card-hover: #161932;
-  --border: rgba(255, 255, 255, 0.07);
-  --border-accent: rgba(99, 102, 241, 0.3);
-
-  /* Text */
-  --text-primary: #f1f5f9;
-  --text-secondary: #94a3b8;
-  --text-muted: #475569;
-
-  /* Accent */
-  --accent: #6366f1;
-  --accent-2: #8b5cf6;
-  --accent-3: #06b6d4;
-  --accent-glow: rgba(99, 102, 241, 0.2);
-  --green: #22c55e;
-  --orange: #f59e0b;
-
-  /* Typography */
-  --font-body: 'Inter', system-ui, sans-serif;
-  --font-display: 'Outfit', 'Inter', sans-serif;
-
-  /* Spacing */
-  --section-py: 100px;
-  --container-max: 1140px;
+@layer utilities {
+  .gradient-text {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6, #06b6d4);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
 }
 
-html {
-  scroll-behavior: smooth;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-body {
-  font-family: var(--font-body);
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
-  line-height: 1.6;
-  overflow-x: hidden;
-}
-
-/* ─── Container ──────────────────────────────────────────────── */
-.container {
-  max-width: var(--container-max);
-  margin: 0 auto;
-  padding: 0 24px;
-}
-
-/* ─── Utilities ──────────────────────────────────────────────── */
-.gradient-text {
-  background: linear-gradient(135deg, var(--accent), var(--accent-2), var(--accent-3));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.card {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  padding: 32px;
-  transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
-}
-
-.card:hover {
-  transform: translateY(-4px);
-  border-color: var(--border-accent);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4), 0 0 0 1px var(--border-accent);
-}
-
-/* ─── Scrollbar ──────────────────────────────────────────────── */
+/* Scrollbar */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: var(--bg-secondary); }
-::-webkit-scrollbar-thumb { background: var(--bg-card-hover); border-radius: 6px; }
-::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+::-webkit-scrollbar-track { @apply bg-background-secondary; }
+::-webkit-scrollbar-thumb { @apply bg-background-card rounded-pill; }
+::-webkit-scrollbar-thumb:hover { @apply bg-primary; }
 
-/* ─── Selection ──────────────────────────────────────────────── */
-::selection { background: var(--accent); color: #fff; }
+/* Selection */
+::selection { @apply bg-primary text-white; }
 
-/* ─── Focus Ring ─────────────────────────────────────────────── */
-:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+/* Focus Ring */
+:focus-visible { @apply outline-2 outline-primary outline-offset-4; }
 
-/* ─── Link Reset ─────────────────────────────────────────────── */
-a { color: inherit; text-decoration: none; }
+/* ─── Clerk UI Luxury High-Contrast Theme ────────────────────────── */
+.cl-rootBox {
+  width: 100% !important;
+}
+
+.cl-cardBox {
+  width: 100% !important;
+  display: flex !important;
+  justify-content: center !important;
+}
+
+.cl-card {
+  background: rgba(13, 18, 36, 0.98) !important;
+  backdrop-filter: blur(24px) !important;
+  border: 1px solid rgba(99, 102, 241, 0.3) !important;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), 0 0 40px rgba(99, 102, 241, 0.15) !important;
+  border-radius: 1.5rem !important;
+  color: #ffffff !important;
+  overflow: hidden !important;
+  padding: 2.25rem 2rem !important;
+}
+
+/* Header Spacing & Typography */
+.cl-header {
+  margin-bottom: 1.75rem !important;
+  padding: 0.5rem 0 !important;
+  text-align: center !important;
+}
+
+.cl-headerTitle {
+  color: #ffffff !important;
+  font-family: 'Outfit', sans-serif !important;
+  font-weight: 700 !important;
+  font-size: 1.65rem !important;
+  letter-spacing: -0.02em !important;
+  margin-bottom: 0.5rem !important;
+  text-align: center !important;
+}
+
+.cl-headerSubtitle {
+  color: #cbd5e1 !important;
+  font-size: 0.925rem !important;
+  line-height: 1.6 !important;
+  text-align: center !important;
+  margin-top: 0.25rem !important;
+}
+
+/* Main Form Body Spacing */
+.cl-main {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 1.5rem !important;
+  padding: 0.5rem 0 !important;
+}
+
+.cl-form {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 1.25rem !important;
+}
+
+.cl-formField {
+  margin-bottom: 1rem !important;
+}
+
+.cl-formFieldLabel {
+  color: #e2e8f0 !important;
+  font-weight: 600 !important;
+  font-size: 0.9rem !important;
+  margin-bottom: 0.5rem !important;
+  display: block !important;
+}
+
+/* Soft Ice-Slate Input Fill (Modern, Non-Glaring, Light Tint) */
+.cl-formFieldInput {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+  font-weight: 600 !important;
+  border: 2px solid #cbd5e1 !important;
+  border-radius: 0.85rem !important;
+  padding: 0.85rem 1.15rem !important;
+  font-size: 0.95rem !important;
+  transition: all 0.2s ease-in-out !important;
+  width: 100% !important;
+}
+
+.cl-formFieldInput::placeholder {
+  color: #64748b !important;
+  font-weight: 400 !important;
+}
+
+.cl-formFieldInput:focus {
+  background-color: #ffffff !important;
+  border-color: #6366f1 !important;
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.25) !important;
+  outline: none !important;
+}
+
+/* OTP Verification Code Inputs - Spacious & Clear */
+.cl-otpCodeFieldInputs {
+  display: flex !important;
+  flex-direction: row !important;
+  gap: 0.75rem !important;
+  justify-content: center !important;
+  margin: 1.5rem 0 !important;
+  padding: 0.5rem 0 !important;
+}
+
+.cl-otpCodeFieldInput {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+  font-weight: 800 !important;
+  font-size: 1.4rem !important;
+  text-align: center !important;
+  border: 2px solid #cbd5e1 !important;
+  border-radius: 0.85rem !important;
+  width: 3.25rem !important;
+  height: 3.75rem !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+  transition: all 0.2s ease !important;
+}
+
+.cl-otpCodeFieldInput:focus {
+  background-color: #ffffff !important;
+  border-color: #4f46e5 !important;
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.35) !important;
+  transform: translateY(-2px) !important;
+}
+
+/* Primary Submit Button - Spacious with Margin */
+.cl-formButtonPrimary {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6) !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  font-size: 0.95rem !important;
+  letter-spacing: 0.04em !important;
+  text-transform: uppercase !important;
+  padding: 0.95rem 1.75rem !important;
+  border-radius: 0.85rem !important;
+  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.35) !important;
+  transition: all 0.2s ease !important;
+  margin-top: 0.5rem !important;
+  width: 100% !important;
+}
+
+.cl-formButtonPrimary:hover {
+  background: linear-gradient(135deg, #4f46e5, #7c3aed) !important;
+  box-shadow: 0 10px 28px rgba(99, 102, 241, 0.5) !important;
+  transform: translateY(-1px) !important;
+}
+
+/* Identity Preview Box (Email badge on verify page) */
+.cl-identityPreview {
+  background: rgba(99, 102, 241, 0.12) !important;
+  border: 1px solid rgba(99, 102, 241, 0.3) !important;
+  border-radius: 0.85rem !important;
+  padding: 0.75rem 1.25rem !important;
+  margin: 1rem 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+}
+
+.cl-identityPreviewText {
+  color: #ffffff !important;
+  font-weight: 600 !important;
+  font-size: 0.95rem !important;
+}
+
+.cl-identityPreviewEditButton {
+  color: #818cf8 !important;
+  font-weight: 600 !important;
+  padding: 0.25rem 0.5rem !important;
+}
+
+.cl-identityPreviewEditButton:hover {
+  color: #a5b4fc !important;
+}
+
+/* Resend Code Link */
+.cl-formResendCodeLink {
+  color: #818cf8 !important;
+  font-weight: 600 !important;
+  font-size: 0.9rem !important;
+  text-decoration: none !important;
+  margin-top: 0.5rem !important;
+  display: inline-block !important;
+}
+
+.cl-formResendCodeLink:hover {
+  color: #c7d2fe !important;
+  text-decoration: underline !important;
+}
+
+/* ─── Footer Area: Clean, High-Contrast & Horizontal ────────────────────────── */
+.cl-footer {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 1rem !important;
+  padding: 1.15rem 1.5rem !important;
+  margin-top: 1.5rem !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.65rem !important;
+}
+
+/* Horizontal action row: "Don't have an account? Sign up" */
+.cl-footerAction {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.4rem !important;
+  white-space: nowrap !important;
+  margin: 0 auto !important;
+  width: 100% !important;
+}
+
+.cl-footerActionText {
+  color: #e2e8f0 !important;
+  font-size: 0.9rem !important;
+  font-weight: 500 !important;
+  margin: 0 !important;
+}
+
+.cl-footerActionLink {
+  color: #a5b4fc !important;
+  font-weight: 700 !important;
+  font-size: 0.9rem !important;
+  text-decoration: underline !important;
+  text-underline-offset: 4px !important;
+  transition: all 0.2s ease !important;
+  margin-left: 0.25rem !important;
+}
+
+.cl-footerActionLink:hover {
+  color: #ffffff !important;
+  text-shadow: 0 0 12px rgba(165, 180, 252, 0.6) !important;
+}
+
+/* Secured by Clerk & Footer Branding */
+.cl-footerPages,
+.cl-footerPagesLink,
+.cl-footerPagesLinkText,
+.cl-footerItem,
+.cl-footerActionLink {
+  color: #f1f5f9 !important;
+  font-size: 0.85rem !important;
+  font-weight: 600 !important;
+  opacity: 1 !important;
+}
+
+/* Development mode pill badge */
+[class*="developmentModeBadge"],
+.cl-developmentModeBadge {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: #fed7aa !important;
+  background: rgba(234, 88, 12, 0.25) !important;
+  border: 1px solid rgba(251, 146, 60, 0.45) !important;
+  padding: 0.3rem 0.85rem !important;
+  border-radius: 9999px !important;
+  font-size: 0.75rem !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.02em !important;
+}
+
+/* ─── Clerk UserButton Popover Menu — Ultra Bright & Clear ───────── */
+.cl-userButtonPopoverCard,
+[class*="userButtonPopoverCard"] {
+  background: rgba(13, 18, 36, 0.98) !important;
+  backdrop-filter: blur(24px) !important;
+  border: 1px solid rgba(99, 102, 241, 0.35) !important;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 40px rgba(99, 102, 241, 0.2) !important;
+  border-radius: 1.25rem !important;
+  color: #ffffff !important;
+  overflow: hidden !important;
+}
+
+.cl-userPreviewMainIdentifier,
+.cl-userPreviewMainIdentifier *,
+[class*="userPreviewMainIdentifier"],
+[class*="userPreviewMainIdentifier"] * {
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  font-size: 0.95rem !important;
+  opacity: 1 !important;
+}
+
+.cl-userPreviewSecondaryIdentifier,
+.cl-userPreviewSecondaryIdentifier *,
+[class*="userPreviewSecondaryIdentifier"],
+[class*="userPreviewSecondaryIdentifier"] * {
+  color: #cbd5e1 !important;
+  font-size: 0.85rem !important;
+  opacity: 1 !important;
+}
+
+.cl-userButtonPopoverActionButton,
+.cl-userButtonPopoverCustomMenuItem,
+[class*="userButtonPopoverActionButton"],
+[class*="userButtonPopoverCustomMenuItem"] {
+  color: #f1f5f9 !important;
+  border-radius: 0.75rem !important;
+  transition: all 0.2s ease !important;
+  padding: 0.65rem 0.85rem !important;
+}
+
+.cl-userButtonPopoverActionButton:hover,
+.cl-userButtonPopoverCustomMenuItem:hover,
+[class*="userButtonPopoverActionButton"]:hover,
+[class*="userButtonPopoverCustomMenuItem"]:hover {
+  background: rgba(99, 102, 241, 0.2) !important;
+  color: #ffffff !important;
+}
+
+.cl-userButtonPopoverActionButtonText,
+.cl-userButtonPopoverActionButtonText *,
+[class*="userButtonPopoverActionButtonText"],
+[class*="userButtonPopoverActionButtonText"] * {
+  color: #f1f5f9 !important;
+  font-weight: 600 !important;
+  font-size: 0.9rem !important;
+  opacity: 1 !important;
+}
+
+.cl-userButtonPopoverActionButton:hover .cl-userButtonPopoverActionButtonText,
+[class*="userButtonPopoverActionButton"]:hover [class*="userButtonPopoverActionButtonText"] {
+  color: #ffffff !important;
+}
+
+.cl-userButtonPopoverActionButtonIcon,
+.cl-userButtonPopoverActionButtonIcon *,
+[class*="userButtonPopoverActionButtonIcon"],
+[class*="userButtonPopoverActionButtonIcon"] * {
+  color: #818cf8 !important;
+  opacity: 1 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-width: 1.25rem !important;
+  min-height: 1.25rem !important;
+  margin-right: 0.5rem !important;
+}
+
+.cl-userButtonPopoverActionButtonIcon svg,
+.cl-userButtonPopoverActionButtonIcon svg path,
+[class*="userButtonPopoverActionButtonIcon"] svg,
+[class*="userButtonPopoverActionButtonIcon"] svg path {
+  color: #818cf8 !important;
+  stroke: #818cf8 !important;
+  opacity: 1 !important;
+  display: inline-block !important;
+}
+
+.cl-userButtonPopoverFooter,
+[class*="userButtonPopoverFooter"] {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+
+

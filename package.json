@@ -1,25 +1,65 @@
 {
-  "name": "mybot",
-  "version": "0.1.0",
+  "name": "chatiobyanza",
+  "version": "1.0.0",
+  "description": "Chatio by Anza - 100% Free, Open-Source Universal Custom RAG AI Chatbot Platform powered by Next.js 16, LangChain, Google Gemini, Groq, and MongoDB Vector Search.",
+  "author": "Muhammad Anza Muneeb Khan",
+  "homepage": "https://github.com/anzamuneebkhanofficial/chatio#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/anzamuneebkhanofficial/chatio.git"
+  },
+  "keywords": [
+    "chatio",
+    "chatiobyanza",
+    "ai-chatbot",
+    "rag",
+    "langchain",
+    "google-gemini",
+    "groq",
+    "mongodb-vector-search",
+    "shadow-dom-embed",
+    "nextjs16",
+    "react19",
+    "customer-support-ai",
+    "open-source"
+  ],
+  "license": "MIT",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
+    "dev": "next dev --webpack",
+    "build:widget": "node scripts/build-widget.js",
+    "build": "npm run build:widget && next build",
     "start": "next start"
   },
   "dependencies": {
+    "@clerk/nextjs": "^7.7.8",
     "@langchain/community": "^1.1.29",
     "@langchain/core": "^1.2.5",
     "@langchain/google": "^0.2.1",
     "@langchain/google-genai": "^2.2.0",
     "@langchain/groq": "^1.3.1",
     "@langchain/textsplitters": "^1.0.1",
+    "axios": "^1.19.0",
+    "bcryptjs": "^3.0.3",
     "cheerio": "^1.2.0",
     "langchain": "^1.5.5",
+    "lucide-react": "^1.31.0",
     "mongodb": "^7.5.0",
+    "mongoose": "^9.9.3",
     "next": "16.2.10",
+    "rate-limiter-flexible": "^11.2.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "react-hook-form": "^7.85.0",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
+    "sonner": "^2.0.8",
     "turndown": "^7.2.4"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.5.4",
+    "esbuild": "^0.28.2",
+    "postcss": "^8.5.26",
+    "tailwindcss": "^3.4.19"
   }
 }

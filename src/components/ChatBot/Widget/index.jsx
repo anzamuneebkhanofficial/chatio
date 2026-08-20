@@ -3,156 +3,46 @@
 /**
  * ChatWidget — High-Performance, Ultra-Responsive AI Chatbot Component
  *
- * Designed for Muhammad Anza Muneeb Khan AI Assistant.
- * Features:
- *   - Gold/Yellow Aesthetics matching UI design
- *   - Guardrail verification (Portfolio scope protection)
- *   - Resilient multi-layer error handling (429, 500, network loss)
- *   - Zero-lag input state updates
- *   - Smart auto-scroll without scroll lock
- *   - Quick-action suggestion chips
- *   - Feedback buttons (Thumbs Up / Down / TTS)
+ * Fully optimized with React.memo, isolated message rendering (zero Markdown
+ * re-parsing on keystrokes), anti-extension interference tags (Grammarly/Spellcheck),
+ * and synchronous DOM auto-grow to deliver 60fps instant, lag-free typing.
  */
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, memo } from 'react';
+import { useForm } from 'react-hook-form';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import axios from 'axios';
 import styles from './ChatWidget.module.css';
 import { checkGuardrails } from '../lib/guardrails';
-
-// ─── Inline SVG Icons ────────────────────────────────────────────────────────
-
-const Ico = {
-  Chat: () => (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-    </svg>
-  ),
-  Sparkle: () => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M12 0L14.59 9.41L24 12L14.59 14.59L12 24L9.41 14.59L0 12L9.41 9.41L12 0Z" />
-    </svg>
-  ),
-  Close: () => (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-      <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-    </svg>
-  ),
-  Send: () => (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
-    </svg>
-  ),
-  Mic: ({ on }) => (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={on ? '#ef4444' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-      <path d="M19 10v2a7 7 0 0 1-14 0v-2" /><line x1="12" y1="19" x2="12" y2="23" /><line x1="8" y1="23" x2="16" y2="23" />
-    </svg>
-  ),
-  Volume: () => (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
-      <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" />
-    </svg>
-  ),
-  Stop: () => (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <rect x="6" y="6" width="12" height="12" rx="2" />
-    </svg>
-  ),
-  Trash: () => (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-    </svg>
-  ),
-  ThumbUp: ({ active }) => (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill={active ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" />
-    </svg>
-  ),
-  ThumbDown: ({ active }) => (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill={active ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-3" />
-    </svg>
-  ),
-};
-
-// ─── Text Renderer ────────────────────────────────────────────────────────────
-
-function renderText(text) {
-  if (!text) return '';
-
-  const lines = text.split('\n');
-  let html = '';
-  let inNumberedList = false;
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const trimmed = line.trim();
-
-    if (!trimmed) {
-      if (inNumberedList) { html += '</ol>'; inNumberedList = false; }
-      html += '<br>';
-      continue;
-    }
-
-    // Source citation line
-    const sourceMatch = trimmed.match(/^Source:\s*(https?:\/\/\S+)$/i);
-    if (sourceMatch) {
-      if (inNumberedList) { html += '</ol>'; inNumberedList = false; }
-      const url = sourceMatch[1];
-      html += `<p class="source-line">📄 <strong>Source:</strong> <a href="${url}" target="_blank" rel="noopener noreferrer" class="source-link">${url}</a></p>`;
-      continue;
-    }
-
-    // Numbered list items
-    const numberedMatch = trimmed.match(/^(\d+)[.)]\s+(.+)/);
-    if (numberedMatch) {
-      if (!inNumberedList) { html += '<ol>'; inNumberedList = true; }
-      html += `<li>${formatInline(numberedMatch[2])}</li>`;
-      continue;
-    }
-
-    if (inNumberedList) { html += '</ol>'; inNumberedList = false; }
-
-    // Bullet points
-    const bulletMatch = trimmed.match(/^[-•*]\s+(.+)/);
-    if (bulletMatch) {
-      html += `<p style="margin-left: 12px;">• ${formatInline(bulletMatch[1])}</p>`;
-      continue;
-    }
-
-    // Labels / Headings
-    const labelMatch = trimmed.match(/^(First|Second|Third|Fourth|Fifth|Finally|Note|Important|Scope Notice|Topics I can help you with):\s*(.*)/i);
-    if (labelMatch) {
-      html += `<p><strong>${labelMatch[1]}:</strong> ${formatInline(labelMatch[2])}</p>`;
-      continue;
-    }
-
-    html += `<p>${formatInline(trimmed)}</p>`;
-  }
-
-  if (inNumberedList) html += '</ol>';
-  return html;
-}
-
-function formatInline(str) {
-  let escaped = escapeHtml(str);
-  // Bold formatting **text** -> <strong>text</strong>
-  escaped = escaped.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-  return escaped;
-}
-
-function escapeHtml(str) {
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
+import { DEMO_PRESETS, CHATIO_DEFAULT_PRESET } from '../lib/demoPresets';
+import {
+  Sparkles,
+  Send,
+  Mic,
+  MicOff,
+  Volume2,
+  Square,
+  ThumbsUp,
+  ThumbsDown,
+  X,
+  Copy,
+  Check,
+  Rocket,
+  Brain,
+  Settings,
+  Zap,
+  RotateCcw,
+  UtensilsCrossed,
+  ShoppingBag,
+  Stethoscope,
+  Palette,
+} from 'lucide-react';
 
 function formatTime(date) {
   if (!date) return '';
   try {
-    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+    return new Date(date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
   } catch {
     return '';
   }
@@ -160,12 +50,12 @@ function formatTime(date) {
 
 // ─── Initial state factories ──────────────────────────────────────────────────
 
-function makeWelcome(botName) {
+function makeWelcome(botName, customWelcome = null) {
   return {
     id: 'init',
     role: 'assistant',
-    content: `Hello! I am ${botName}.\n\nI can help answer questions about Muhammad Anza Muneeb Khan's skills, software engineering projects, AI RAG solutions, video courses, services, and booking consultations. How can I assist you today?`,
-    timestamp: null,
+    content: customWelcome || `Hello! I am ${botName || 'Chatio AI assistant'}.\n\nHow can I assist you today?`,
+    timestamp: new Date(),
     provider: null,
   };
 }
@@ -182,54 +72,346 @@ function makeMsg(role, content, provider = null) {
   };
 }
 
-const SUGGESTIONS = [
-  { label: '🚀 Featured Projects', prompt: "What are Muhammad Anza Muneeb Khan's featured software engineering projects?" },
-  { label: '💻 AI & Web Services', prompt: 'What AI & Web services do you provide?' },
-  { label: '🧠 Tech Stack & Skills', prompt: 'What is your tech stack & core skills?' },
-  { label: '📅 Book a Consultation', prompt: 'How can I book a consultation with Anza?' },
-];
+// ─── Memoized Single Message Item (Zero Markdown Re-rendering on Typing) ────────
 
-// ─── ChatWidget Component ─────────────────────────────────────────────────────
+const MessageItem = memo(function MessageItem({
+  msg,
+  hasMounted,
+  isSpeaking,
+  copiedId,
+  onToggleLike,
+  onCopy,
+  onSpeak,
+}) {
+  return (
+    <div className={`${styles.row} ${msg.role === 'user' ? styles.rowUser : styles.rowBot}`}>
+      {msg.role === 'assistant' && (
+        <div className={styles.msgAvatar}>
+          <Sparkles className="w-3.5 h-3.5" />
+        </div>
+      )}
+
+      <div className={`${styles.bubble} ${msg.role === 'user' ? styles.bubbleUser : styles.bubbleBot} ${msg.isError ? styles.bubbleError : ''}`}>
+        {msg.role === 'assistant' ? (
+          <div className={styles.bubbleHtml}>
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {msg.content}
+            </ReactMarkdown>
+          </div>
+        ) : (
+          <p className={styles.bubblePlain}>{msg.content}</p>
+        )}
+
+        <div className={styles.msgMeta}>
+          <span className={styles.metaTime} suppressHydrationWarning>
+            {hasMounted ? formatTime(msg.timestamp) : ''}
+          </span>
+
+          {msg.role === 'assistant' && !msg.isError && (
+            <div className={styles.actionGroup}>
+              <button
+                className={`${styles.actionBtn} ${msg.liked ? styles.actionBtnActive : ''}`}
+                onClick={() => onToggleLike(msg.id, 'like')}
+                title="Helpful response"
+                aria-label="Helpful response"
+              >
+                <ThumbsUp className={`w-3 h-3 ${msg.liked ? 'fill-current text-indigo-400' : ''}`} />
+              </button>
+              <button
+                className={`${styles.actionBtn} ${msg.disliked ? styles.actionBtnActive : ''}`}
+                onClick={() => onToggleLike(msg.id, 'dislike')}
+                title="Not helpful"
+                aria-label="Not helpful"
+              >
+                <ThumbsDown className={`w-3 h-3 ${msg.disliked ? 'fill-current text-red-400' : ''}`} />
+              </button>
+              <button
+                className={styles.actionBtn}
+                onClick={() => onCopy(msg.id, msg.content)}
+                title="Copy message"
+                aria-label="Copy message"
+              >
+                {copiedId === msg.id ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
+              </button>
+              <button
+                className={styles.actionBtn}
+                onClick={() => onSpeak(msg.content)}
+                title={isSpeaking ? 'Stop speaking' : 'Read aloud'}
+                aria-label={isSpeaking ? 'Stop speaking' : 'Read aloud'}
+              >
+                {isSpeaking ? <Square className="w-3 h-3 text-red-400" /> : <Volume2 className="w-3 h-3" />}
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+});
+
+// ─── Memoized Messages Thread ─────────────────────────────────────────────────
+
+const MessageList = memo(function MessageList({
+  messages,
+  isLoading,
+  hasMounted,
+  isSpeaking,
+  copiedId,
+  onToggleLike,
+  onCopy,
+  onSpeak,
+  messagesEndRef,
+}) {
+  return (
+    <>
+      {messages.map((msg) => (
+        <MessageItem
+          key={msg.id}
+          msg={msg}
+          hasMounted={hasMounted}
+          isSpeaking={isSpeaking}
+          copiedId={copiedId}
+          onToggleLike={onToggleLike}
+          onCopy={onCopy}
+          onSpeak={onSpeak}
+        />
+      ))}
+
+      {isLoading && (
+        <div className={`${styles.row} ${styles.rowBot}`}>
+          <div className={styles.msgAvatar}><Sparkles className="w-3.5 h-3.5" /></div>
+          <div className={`${styles.bubble} ${styles.bubbleBot} ${styles.typing}`}>
+            <span /><span /><span />
+          </div>
+        </div>
+      )}
+      <div ref={messagesEndRef} />
+    </>
+  );
+});
+
+// ─── Memoized Fast Chat Input Box (React Hook Form Uncontrolled) ─────────────
+
+const ChatInputArea = memo(function ChatInputArea({
+  onSendMessage,
+  isLoading,
+  isListening,
+  onToggleVoice,
+  activeDemo,
+  currentFooter,
+}) {
+  const { register, handleSubmit, reset } = useForm();
+  const textareaRef = useRef(null);
+  const { ref: formRef, ...restRegister } = register('message', { required: true });
+
+  const onSubmit = (data) => {
+    const text = data.message?.trim();
+    if (!text || isLoading) return;
+    onSendMessage(text);
+    reset({ message: '' });
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+    }
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit(onSubmit)();
+    }
+  };
+
+  const handleInput = (e) => {
+    const el = e.target;
+    el.style.height = 'auto';
+    el.style.height = `${Math.min(el.scrollHeight, 90)}px`;
+  };
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)} className={styles.inputArea}>
+      <div className={`${styles.inputBox} ${isLoading ? styles.inputDisabled : ''}`}>
+        <textarea
+          ref={(e) => {
+            formRef(e);
+            textareaRef.current = e;
+          }}
+          id="chatwidget-input"
+          className={styles.textarea}
+          onKeyDown={handleKeyDown}
+          onInput={handleInput}
+          placeholder={isListening ? 'Listening...' : (activeDemo ? `Ask about ${activeDemo.label}...` : "Ask anything about Chatio...")}
+          disabled={isLoading}
+          aria-label="Message input"
+          spellCheck={false}
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
+          data-gramm="false"
+          data-gramm_editor="false"
+          data-enable-grammarly="false"
+          {...restRegister}
+        />
+        <div className={styles.inputActions}>
+          <button
+            className={`${styles.iBtn} ${isListening ? styles.iBtnMic : ''}`}
+            onClick={onToggleVoice}
+            title={isListening ? 'Stop listening' : 'Voice input'}
+            aria-label={isListening ? 'Stop listening' : 'Voice input'}
+            type="button"
+          >
+            {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+          </button>
+          <button
+            id="chatwidget-send-btn"
+            className={styles.sendBtn}
+            type="submit"
+            disabled={isLoading}
+            aria-label="Send Message"
+            title="Send Message"
+          >
+            <Send className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+      <p className={styles.inputHint}>
+        {activeDemo ? `DEMO MODE · ${currentFooter}` : `${currentFooter} · ENTER TO SEND`}
+      </p>
+    </form>
+  );
+});
+
+// ─── ChatWidget Main Component ────────────────────────────────────────────────
 
 export default function ChatWidget({
-  botName = 'Muhammad Anza Muneeb Khan AI Assistant',
+  botName: propBotName,
   apiEndpoint = '/api/chat',
 }) {
+  const [remoteConfig, setRemoteConfig] = useState(null);
+  const [activeDemo, setActiveDemo] = useState(null);
+
+  // Active identity derived from remoteConfig (DB) or active demo session
+  const currentBotName = activeDemo?.name || propBotName || remoteConfig?.botName || CHATIO_DEFAULT_PRESET.name;
+  const currentSubtitle = activeDemo?.tagline || remoteConfig?.widgetDescription || 'Online · Powered by RAG';
+  const currentWelcome = activeDemo?.welcomeMessage || remoteConfig?.welcomeMessage || CHATIO_DEFAULT_PRESET.welcomeMessage;
+  const currentSuggestions = activeDemo?.suggestions || (Array.isArray(remoteConfig?.suggestions) && remoteConfig.suggestions.length > 0 ? remoteConfig.suggestions.filter(s => s && s.label) : CHATIO_DEFAULT_PRESET.suggestions);
+  const currentAvatar = activeDemo?.avatar || remoteConfig?.avatarUrl || '';
+  const currentFooter = activeDemo ? 'DEMO MODE · TEMPORARY SESSION' : (remoteConfig?.footerText || 'POWERED BY CHATIO BY ANZA');
+
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState(() => [makeWelcome(botName)]);
-  const [input, setInput] = useState('');
+  const [messages, setMessages] = useState(() => [makeWelcome(currentBotName, currentWelcome)]);
   const [isLoading, setIsLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [hasMounted, setHasMounted] = useState(false);
   const [newMsgAlert, setNewMsgAlert] = useState(false);
-  const [isQueued, setIsQueued] = useState(false);
+  const [copiedId, setCopiedId] = useState(null);
+  const [chipsVisible, setChipsVisible] = useState(true);
 
+  const widgetRef = useRef(null);
   const messagesContainerRef = useRef(null);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
   const recognitionRef = useRef(null);
 
-  // Client hydration check
+  // Client hydration check & config fetch
   useEffect(() => {
     setHasMounted(true);
-    setMessages((prev) =>
-      prev.map((m) => (m.id === 'init' && !m.timestamp ? { ...m, timestamp: new Date() } : m))
-    );
+
+    if (typeof window !== 'undefined') {
+      const savedDemo = sessionStorage.getItem('chatio_demo_mode');
+      if (savedDemo && DEMO_PRESETS[savedDemo]) {
+        const preset = DEMO_PRESETS[savedDemo];
+        setActiveDemo(preset);
+        setMessages([makeWelcome(preset.name, preset.welcomeMessage)]);
+      }
+    }
+
+    axios.get('/api/widget/config')
+      .then((res) => {
+        const data = res.data;
+        if (data && data.botName) {
+          setRemoteConfig(data);
+          if (!activeDemo) {
+            setMessages((prev) => {
+              if (prev.length <= 1) {
+                return [makeWelcome(data.botName, data.welcomeMessage)];
+              }
+              return prev;
+            });
+          }
+        }
+      })
+      .catch((err) => console.warn('[ChatWidget] Could not fetch remote config:', err));
   }, []);
 
-  // Smart Auto-Scroll: scroll down only if user is near bottom or sending message
-  const scrollToBottom = useCallback((force = false) => {
-    const container = messagesContainerRef.current;
-    if (!container) return;
+  // ── Listen for clicks outside the widget to close it ────────────────────────
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      // If widget is open and the click target is NOT inside the widget root element
+      if (isOpen && widgetRef.current && !widgetRef.current.contains(e.target)) {
+        setIsOpen(false);
+      }
+    };
+    
+    // Use capture phase or regular depending on preference. 
+    // Mouse down feels more responsive than click.
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen]);
 
-    const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 140;
+  // ── Listen for interactive demo mode switches ──────────────────────────────
+  useEffect(() => {
+    const handleDemoChange = (e) => {
+      const demoId = e.detail?.demoId;
+      if (demoId && DEMO_PRESETS[demoId]) {
+        const preset = DEMO_PRESETS[demoId];
+        setActiveDemo(preset);
+        setMessages([makeWelcome(preset.name, preset.welcomeMessage)]);
+        setIsOpen(true);
+      } else {
+        setActiveDemo(null);
+        setMessages([makeWelcome(propBotName || remoteConfig?.botName || CHATIO_DEFAULT_PRESET.name, remoteConfig?.welcomeMessage || CHATIO_DEFAULT_PRESET.welcomeMessage)]);
+      }
+    };
 
-    if (force || isNearBottom) {
-      requestAnimationFrame(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-      });
-    }
+    window.addEventListener('chatio:demo_change', handleDemoChange);
+    return () => window.removeEventListener('chatio:demo_change', handleDemoChange);
+  }, [propBotName, remoteConfig]);
+
+  // ── Dismiss on click outside, right click, or Escape ────────────────────────
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleOutsideClick = (e) => {
+      if (widgetRef.current && !widgetRef.current.contains(e.target)) {
+        setIsOpen(false);
+      }
+    };
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleOutsideClick);
+    document.addEventListener('contextmenu', handleOutsideClick);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+      document.removeEventListener('contextmenu', handleOutsideClick);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen]);
+
+  // Smart Auto-Scroll
+  const scrollToBottom = useCallback(() => {
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }, 50);
   }, []);
 
   useEffect(() => {
@@ -246,35 +428,21 @@ export default function ChatWidget({
     }
   }, [isOpen]);
 
-  // Auto-grow textarea without layout thrashing
-  useEffect(() => {
-    const el = inputRef.current;
-    if (!el) return;
-    el.style.height = 'auto';
-    el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
-  }, [input]);
-
   // ── Send Message Logic ──────────────────────────────────────────────────────
 
-  const sendMessage = useCallback(async (textOverride) => {
-    const text = (textOverride ?? input).trim();
-    if (!text) return;
+  const sendMessage = useCallback(async (text) => {
+    if (!text || !text.trim()) return;
 
-    if (isLoading) {
-      setIsQueued(true);
-      setTimeout(() => setIsQueued(false), 400);
-      return;
-    }
+    setChipsVisible(false);
 
-    const userMsg = makeMsg('user', text);
+    const userMsg = makeMsg('user', text.trim());
     const history = [...messages, userMsg];
     setMessages(history);
-    setInput('');
     setIsLoading(true);
-    scrollToBottom(true);
+    scrollToBottom();
 
     // High-Level Guardrails Validation
-    const guardrail = checkGuardrails(text);
+    const guardrail = checkGuardrails(text.trim(), activeDemo?.id || null);
     if (guardrail.isOffTopic) {
       setTimeout(() => {
         const warningMsg = makeMsg('assistant', guardrail.warningResponse, 'Guardrail');
@@ -288,57 +456,42 @@ export default function ChatWidget({
     const payload = history.map((m) => ({ role: m.role, content: m.content }));
 
     try {
-      const res = await fetch(apiEndpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: payload }),
+      const res = await axios.post(apiEndpoint, {
+        messages: payload,
+        demoId: activeDemo?.id || '',
       });
 
-      const data = await res.json().catch(() => null);
+      const data = res.data;
+      const replyContent = data.reply || data.text || 'No response generated.';
+      const providerUsed = data.provider || null;
 
-      if (!res.ok) {
-        let userFacingError = 'An error occurred while getting the response.';
-        if (res.status === 429) {
-          userFacingError = '⚠️ Rate Limit Reached: You are sending messages too quickly. Please wait 60 seconds before sending more.';
-        } else if (res.status === 500) {
-          userFacingError = data?.error || '⚠️ Server Error: The AI service encountered an issue. Please try again shortly.';
-        } else if (data?.error) {
-          userFacingError = `⚠️ ${data.error}`;
-        }
-
-        const errorMsg = makeMsg('assistant', userFacingError, null);
-        errorMsg.isError = true;
-        setMessages((prev) => [...prev, errorMsg]);
-        return;
-      }
-
-      if (!data || (!data.text && !data.error)) {
-        throw new Error('Invalid response payload received from server.');
-      }
-
-      if (data.error) {
-        const errorMsg = makeMsg('assistant', `⚠️ ${data.error}`, null);
-        errorMsg.isError = true;
-        setMessages((prev) => [...prev, errorMsg]);
-        return;
-      }
-
-      const botMsg = makeMsg('assistant', data.text, data.provider);
-      setMessages((prev) => [...prev, botMsg]);
+      const aiMsg = makeMsg('assistant', replyContent, providerUsed);
+      setMessages((prev) => [...prev, aiMsg]);
       if (!isOpen) setNewMsgAlert(true);
     } catch (err) {
       console.error('[ChatWidget] Error sending message:', err);
-      let networkError = '⚠️ Network Error: Unable to connect to the AI server. Please check your internet connection and try again.';
-      if (err.message && !err.message.includes('object')) {
-        networkError = `⚠️ ${err.message}`;
+      let userFacingError = 'An error occurred while getting the response.';
+      const status = err.response?.status;
+      const data = err.response?.data;
+      
+      if (status === 429) {
+        userFacingError = '⚠️ Rate Limit Reached: You are sending messages too quickly. Please wait 60 seconds before sending more.';
+      } else if (status === 500) {
+        userFacingError = data?.error || '⚠️ Server Error: The AI service encountered an issue. Please try again shortly.';
+      } else if (data?.error) {
+        userFacingError = `⚠️ ${data.error}`;
+      } else if (err.message && !err.message.includes('object')) {
+        userFacingError = `⚠️ Network Error: ${err.message}`;
       }
-      const errMsg = makeMsg('assistant', networkError, null);
-      errMsg.isError = true;
-      setMessages((prev) => [...prev, errMsg]);
+
+      const errorMsg = makeMsg('assistant', userFacingError, null);
+      errorMsg.isError = true;
+      setMessages((prev) => [...prev, errorMsg]);
     } finally {
       setIsLoading(false);
+      setTimeout(() => inputRef.current?.focus(), 50);
     }
-  }, [input, isLoading, messages, isOpen, apiEndpoint, scrollToBottom]);
+  }, [messages, isOpen, apiEndpoint, scrollToBottom, activeDemo]);
 
   // ── Voice Input ─────────────────────────────────────────────────────────────
 
@@ -363,7 +516,9 @@ export default function ChatWidget({
     rec.onerror = () => setIsListening(false);
     rec.onresult = (e) => {
       const transcript = e.results[0][0].transcript;
-      setInput((prev) => (prev ? `${prev} ${transcript}` : transcript));
+      if (inputRef.current) {
+        inputRef.current.value = (inputRef.current.value ? `${inputRef.current.value} ${transcript}` : transcript);
+      }
     };
     rec.start();
   }, [isListening]);
@@ -388,6 +543,16 @@ export default function ChatWidget({
     window.speechSynthesis.speak(utter);
   }, []);
 
+  // ── Copy to Clipboard ───────────────────────────────────────────────────────
+
+  const copyToClipboard = useCallback((msgId, text) => {
+    const cleanText = text.replace(/<[^>]*>/g, '').replace(/[*#]/g, '');
+    navigator.clipboard.writeText(cleanText).then(() => {
+      setCopiedId(msgId);
+      setTimeout(() => setCopiedId(null), 2000);
+    });
+  }, []);
+
   // ── Feedback Handlers ───────────────────────────────────────────────────────
 
   const toggleLike = useCallback((msgId, type) => {
@@ -406,31 +571,47 @@ export default function ChatWidget({
   // ── Clear Chat ──────────────────────────────────────────────────────────────
 
   const clearChat = useCallback(() => {
-    setMessages([{ ...makeWelcome(botName), timestamp: new Date() }]);
-  }, [botName]);
+    setMessages([{ ...makeWelcome(currentBotName, currentWelcome), timestamp: new Date() }]);
+  }, [currentBotName, currentWelcome]);
 
-  // ── Keyboard handling ───────────────────────────────────────────────────────
+  // ── Reset to default Chatio ─────────────────────────────────────────────────
 
-  const onKeyDown = useCallback((e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
+  const resetToDefaultChatio = useCallback(() => {
+    setActiveDemo(null);
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('chatio_demo_mode');
+      window.dispatchEvent(new CustomEvent('chatio:demo_change', { detail: { demoId: 'default' } }));
     }
-  }, [sendMessage]);
+  }, []);
 
-  // ── Render ──────────────────────────────────────────────────────────────────
+  // Helper icon for chips
+  const getChipIcon = (idx) => {
+    if (activeDemo?.id === 'restaurant') return UtensilsCrossed;
+    if (activeDemo?.id === 'ecommerce') return ShoppingBag;
+    if (activeDemo?.id === 'doctor') return Stethoscope;
+    if (activeDemo?.id === 'designer') return Palette;
+
+    const icons = [Rocket, Brain, Settings, Zap];
+    return icons[idx % icons.length];
+  };
+
+  // panelSizeStyle removed to prevent DB config from overriding CSS and causing layout flashing
 
   return (
-    <div className={styles.root}>
+    <div ref={widgetRef} className={styles.root}>
       {/* ── FAB Toggle Button ── */}
       <button
         id="chatwidget-open-btn"
         className={`${styles.fab} ${isOpen ? styles.fabHidden : ''}`}
-        onClick={() => setIsOpen(true)}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setIsOpen(true);
+        }}
         aria-label="Open AI Chat"
-        title="Chat with Muhammad Anza Muneeb Khan AI Assistant"
+        title="Chat with Chatio AI Assistant"
       >
-        <Ico.Sparkle />
+        <Sparkles className="w-6 h-6 text-white animate-pulse" />
         {newMsgAlert && <span className={styles.alertDot} />}
       </button>
 
@@ -445,141 +626,124 @@ export default function ChatWidget({
         <div className={styles.header}>
           <div className={styles.headerInfo}>
             <div className={styles.avatarWrap}>
-              <span className={styles.avatar}><Ico.Sparkle /></span>
+              <span className={styles.avatar}>
+                {currentAvatar ? (
+                  <img src={currentAvatar} alt="Avatar" className="w-5 h-5 rounded-full object-cover" />
+                ) : (
+                  <>
+                    {activeDemo?.id === 'restaurant' && <UtensilsCrossed className="w-4 h-4" />}
+                    {activeDemo?.id === 'ecommerce' && <ShoppingBag className="w-4 h-4" />}
+                    {activeDemo?.id === 'doctor' && <Stethoscope className="w-4 h-4" />}
+                    {activeDemo?.id === 'designer' && <Palette className="w-4 h-4" />}
+                    {!activeDemo && <Sparkles className="w-4 h-4" />}
+                  </>
+                )}
+              </span>
               <span className={styles.onlineDot} />
             </div>
             <div>
-              <p className={styles.botName}>{botName}</p>
+              <div className="flex items-center gap-1.5">
+                <p className={styles.botName}>{currentBotName}</p>
+                {activeDemo && (
+                  <span className={styles.demoBadge}>DEMO</span>
+                )}
+              </div>
               <p className={styles.botMeta}>
                 <span className={styles.pulseDot} />
-                Online · Muhammad Anza Muneeb Khan AI Assistant
+                {currentSubtitle}
               </p>
             </div>
           </div>
           <div className={styles.headerBtns}>
-            <button className={styles.hBtn} onClick={clearChat} title="Clear chat history">
-              <Ico.Trash />
+            {activeDemo && (
+              <button
+                className={styles.hBtn}
+                onClick={resetToDefaultChatio}
+                title="Reset to Chatio Platform Assistant"
+                aria-label="Reset to Chatio"
+              >
+                <RotateCcw className="w-3.5 h-3.5 text-indigo-400" />
+              </button>
+            )}
+            <button
+              className={styles.hBtn}
+              onClick={clearChat}
+              title="Clear chat history"
+              aria-label="Clear chat history"
+            >
+              <RotateCcw className="w-4 h-4" />
             </button>
-            <button className={styles.hBtn} onClick={() => setIsOpen(false)} title="Close chat window">
-              <Ico.Close />
+            <button
+              className={`${styles.hBtn} ${styles.hBtnClose}`}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsOpen(false);
+              }}
+              title="Close chat window"
+              aria-label="Close chat window"
+            >
+              <X className="w-4 h-4" />
             </button>
           </div>
         </div>
+
+        {/* Demo Mode Banner */}
+        {activeDemo && (
+          <div className={styles.demoBanner}>
+            <span>⚡ Interactive demo session &mdash; resets on refresh</span>
+            <button onClick={resetToDefaultChatio} className={styles.demoBannerReset}>Reset</button>
+          </div>
+        )}
 
         {/* Messages Container */}
         <div className={styles.messages} id="chatwidget-messages" ref={messagesContainerRef}>
-          {messages.map((msg) => (
-            <div key={msg.id} className={`${styles.row} ${msg.role === 'user' ? styles.rowUser : styles.rowBot}`}>
-              {msg.role === 'assistant' && (
-                <div className={styles.msgAvatar}><Ico.Sparkle /></div>
-              )}
-
-              <div className={`${styles.bubble} ${msg.role === 'user' ? styles.bubbleUser : styles.bubbleBot} ${msg.isError ? styles.bubbleError : ''}`}>
-                {msg.role === 'assistant' ? (
-                  <div
-                    className={styles.bubbleHtml}
-                    dangerouslySetInnerHTML={{ __html: renderText(msg.content) }}
-                  />
-                ) : (
-                  <p className={styles.bubblePlain}>{msg.content}</p>
-                )}
-
-                <div className={styles.msgMeta}>
-                  <span className={styles.metaTime} suppressHydrationWarning>
-                    {hasMounted ? formatTime(msg.timestamp) : ''}
-                  </span>
-
-                  {msg.role === 'assistant' && !msg.isError && (
-                    <div className={styles.actionGroup}>
-                      <button
-                        className={`${styles.actionBtn} ${msg.liked ? styles.actionBtnActive : ''}`}
-                        onClick={() => toggleLike(msg.id, 'like')}
-                        title="Helpful response"
-                      >
-                        <Ico.ThumbUp active={msg.liked} />
-                      </button>
-                      <button
-                        className={`${styles.actionBtn} ${msg.disliked ? styles.actionBtnActive : ''}`}
-                        onClick={() => toggleLike(msg.id, 'dislike')}
-                        title="Not helpful"
-                      >
-                        <Ico.ThumbDown active={msg.disliked} />
-                      </button>
-                      <button
-                        className={styles.actionBtn}
-                        onClick={() => speak(msg.content)}
-                        title="Read aloud"
-                      >
-                        {isSpeaking ? <Ico.Stop /> : <Ico.Volume />}
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
-
-          {/* Typing Indicator */}
-          {isLoading && (
-            <div className={`${styles.row} ${styles.rowBot}`}>
-              <div className={styles.msgAvatar}><Ico.Sparkle /></div>
-              <div className={`${styles.bubble} ${styles.bubbleBot} ${styles.typing}`}>
-                <span /><span /><span />
-              </div>
-            </div>
-          )}
-          <div ref={messagesEndRef} />
+          <MessageList
+            messages={messages}
+            isLoading={isLoading}
+            hasMounted={hasMounted}
+            isSpeaking={isSpeaking}
+            copiedId={copiedId}
+            onToggleLike={toggleLike}
+            onCopy={copyToClipboard}
+            onSpeak={speak}
+            messagesEndRef={messagesEndRef}
+          />
         </div>
 
         {/* Suggestion Chips */}
-        <div className={styles.chipsContainer}>
-          {SUGGESTIONS.map((chip, idx) => (
-            <button
-              key={idx}
-              className={styles.chipBtn}
-              onClick={() => sendMessage(chip.prompt)}
-              disabled={isLoading}
-            >
-              {chip.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Input Area */}
-        <div className={styles.inputArea}>
-          <div className={`${styles.inputBox} ${isLoading ? styles.inputDisabled : ''}`}>
-            <textarea
-              ref={inputRef}
-              id="chatwidget-input"
-              className={styles.textarea}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={onKeyDown}
-              placeholder={isListening ? 'Listening...' : "Ask anything about Muhammad Anza Muneeb Khan's..."}
-              disabled={isLoading}
-              aria-label="Message input"
-            />
-            <div className={styles.inputActions}>
-              <button
-                className={`${styles.iBtn} ${isListening ? styles.iBtnMic : ''}`}
-                onClick={toggleVoice}
-                title={isListening ? 'Stop listening' : 'Voice input'}
-              >
-                <Ico.Mic on={isListening} />
-              </button>
-              <button
-                id="chatwidget-send-btn"
-                className={`${styles.sendBtn} ${isQueued ? styles.sendBtnQueued : ''}`}
-                onClick={() => sendMessage()}
-                disabled={!input.trim()}
-                aria-label="Send Message"
-              >
-                <Ico.Send />
-              </button>
-            </div>
+        {chipsVisible && currentSuggestions.length > 0 && (
+          <div className={styles.chipsContainer}>
+            {currentSuggestions.map((chip, idx) => {
+              const ChipIcon = getChipIcon(idx);
+              return (
+                <button
+                  key={idx}
+                  className={styles.chipBtn}
+                  onClick={() => {
+                    setChipsVisible(false);
+                    sendMessage(chip.prompt);
+                  }}
+                  disabled={isLoading}
+                >
+                  <ChipIcon className={`w-3.5 h-3.5 ${styles.chipIcon}`} />
+                  <span>{chip.label}</span>
+                </button>
+              );
+            })}
           </div>
-          <p className={styles.inputHint}>POWERED BY MUHAMMAD ANZA MUNEEB KHAN · ENTER TO SEND</p>
-        </div>
+        )}
+
+        {/* Input Area (Isolated 60fps fast component) */}
+        <ChatInputArea
+          onSendMessage={sendMessage}
+          isLoading={isLoading}
+          isListening={isListening}
+          onToggleVoice={toggleVoice}
+          activeDemo={activeDemo}
+          currentFooter={currentFooter}
+          inputRef={inputRef}
+        />
       </div>
     </div>
   );
