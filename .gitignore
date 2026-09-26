@@ -38,9 +38,9 @@ yarn-error.log*
 .env.test.local
 .env.production.local
 
-# allow git to track environment template files
+# allow git to track only .env.example template file
 !.env.example
-!.env.local.example
+.env.local.example
 
 # vercel
 .vercel
