@@ -124,10 +124,7 @@ How can I assist you today?`,widgetTitle:"Chatio by Anza",widgetDescription:"Onl
       max-width: calc(100vw - 32px);
       height: var(--widget-h, 640px);
       max-height: calc(100dvh - 120px);
-      min-height: 480px;
-      background: rgba(10, 13, 26, 0.98);
-      backdrop-filter: blur(24px);
-      -webkit-backdrop-filter: blur(24px);
+      background: #080b18;
       color: #f8fafc;
       border: 1px solid rgba(255, 255, 255, 0.12);
       border-radius: 20px;
@@ -276,6 +273,7 @@ How can I assist you today?`,widgetTitle:"Chatio by Anza",widgetDescription:"Onl
     /* \u2500\u2500 Messages Container \u2500\u2500 */
     .messages {
       flex: 1;
+      background: #080b18;
       padding: 16px 16px;
       overflow-y: auto;
       display: flex;
@@ -616,7 +614,7 @@ How can I assist you today?`,widgetTitle:"Chatio by Anza",widgetDescription:"Onl
     /* \u2500\u2500 Input Area \u2500\u2500 */
     .input-wrapper {
       padding: 12px 16px;
-      background: #0d1020;
+      background: #0c1022;
       border-top: 1px solid rgba(255, 255, 255, 0.08);
       display: flex;
       gap: 8px;
@@ -626,22 +624,25 @@ How can I assist you today?`,widgetTitle:"Chatio by Anza",widgetDescription:"Onl
 
     .input-box {
       flex: 1;
-      background: #161b33;
+      background: #121630;
       border: 1px solid rgba(255, 255, 255, 0.12);
       border-radius: 14px;
       padding: 10px 14px;
       color: #ffffff;
       font-size: 0.88rem;
-      outline: none;
+      outline: none !important;
       transition: border-color 0.2s, box-shadow 0.2s;
       font-family: inherit;
+      -webkit-appearance: none;
     }
 
     .input-box::placeholder {
       color: #64748b;
     }
 
-    .input-box:focus {
+    .input-box:focus,
+    .input-box:focus-visible {
+      outline: none !important;
       border-color: var(--primary-color, #6366f1);
       box-shadow: 0 0 0 3px var(--primary-glow-focus, rgba(99, 102, 241, 0.35));
     }

@@ -9,7 +9,7 @@ export const Input = forwardRef(function Input({ className = '', ...props }, ref
       data-gramm="false"
       data-gramm_editor="false"
       data-enable-grammarly="false"
-      className={`flex h-10 w-full rounded-button border border-white/10 bg-background-primary px-3 py-2 text-sm text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
+      className={`flex h-10 w-full rounded-xl border border-white/10 bg-[#0d1020] px-3.5 py-2 text-sm text-slate-100 placeholder:text-slate-500 transition-[border-color,box-shadow] duration-150 ease-out hover:border-white/20 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/25 disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
       {...props}
     />
   );

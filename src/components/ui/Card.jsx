@@ -1,8 +1,10 @@
 import React from 'react';
 
 export function Card({ children, className = '', hover = false, ...props }) {
-  const baseStyles = 'bg-background-card border border-white/5 rounded-card p-6';
-  const hoverStyles = hover ? 'transition-all hover:-translate-y-1 hover:border-primary/30 hover:shadow-[0_20px_60px_rgba(0,0,0,0.4),0_0_0_1px_rgba(99,102,241,0.2)]' : '';
+  const baseStyles = 'bg-[#111428] border border-white/[0.08] rounded-xl p-6 text-slate-100';
+  const hoverStyles = hover
+    ? 'transition-[border-color,background-color,transform] duration-150 ease-out hover:border-indigo-500/35 hover:bg-[#13172e] hover:-translate-y-0.5'
+    : '';
   
   return (
     <div className={`${baseStyles} ${hoverStyles} ${className}`} {...props}>

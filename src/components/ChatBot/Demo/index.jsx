@@ -17,7 +17,6 @@ import {
   Stethoscope,
   Palette,
   CheckCircle2,
-  Sparkles,
   RotateCcw,
   Clock,
   Info,
@@ -127,7 +126,7 @@ export default function DemoPanel() {
         <div className={`${styles.status} ${styles.statusOk}`}>
           <div className="flex items-center justify-between w-full gap-2">
             <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-green-400 shrink-0" />
+              <CheckCircle2 className="w-4 h-4 text-green-400 shrink-0" />
               <span>
                 <strong>{activePreset.name}</strong> active. Open chat and ask: <em>&ldquo;{activePreset.suggestions[0]?.prompt}&rdquo;</em>
               </span>

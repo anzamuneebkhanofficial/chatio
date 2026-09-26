@@ -26,7 +26,7 @@
   "license": "MIT",
   "private": true,
   "scripts": {
-    "dev": "next dev --webpack",
+    "dev": "next dev",
     "build:widget": "node scripts/build-widget.js",
     "build": "npm run build:widget && next build",
     "start": "next start"

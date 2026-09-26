@@ -1,10 +1,20 @@
 import { clerkMiddleware } from '@clerk/nextjs/server';
 
+// Only enable frontendApiProxy in production with live keys (e.g. vercel.app custom domain proxy)
+// In local development or with pk_test_* keys, frontendApiProxy causes "Invalid host" (host_invalid) on localhost:3000
+const isProduction = process.env.NODE_ENV === 'production';
+const isLiveKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.startsWith('pk_live_');
+const enableProxy = Boolean(isProduction && isLiveKey);
+
 export default clerkMiddleware({
   clockSkewInMs: 60000,
-  frontendApiProxy: {
-    enabled: true,
-  },
+  ...(enableProxy
+    ? {
+        frontendApiProxy: {
+          enabled: true,
+        },
+      }
+    : {}),
 });
 
 export const config = {

@@ -16,8 +16,8 @@ import axios from 'axios';
 import styles from './ChatWidget.module.css';
 import { checkGuardrails } from '../lib/guardrails';
 import { DEMO_PRESETS, CHATIO_DEFAULT_PRESET } from '../lib/demoPresets';
+import { BrandMark } from '@/components/ui/BrandMark';
 import {
-  Sparkles,
   Send,
   Mic,
   MicOff,
@@ -87,7 +87,7 @@ const MessageItem = memo(function MessageItem({
     <div className={`${styles.row} ${msg.role === 'user' ? styles.rowUser : styles.rowBot}`}>
       {msg.role === 'assistant' && (
         <div className={styles.msgAvatar}>
-          <Sparkles className="w-3.5 h-3.5" />
+          <BrandMark size={14} className="text-white" />
         </div>
       )}
 
@@ -179,7 +179,7 @@ const MessageList = memo(function MessageList({
 
       {isLoading && (
         <div className={`${styles.row} ${styles.rowBot}`}>
-          <div className={styles.msgAvatar}><Sparkles className="w-3.5 h-3.5" /></div>
+          <div className={styles.msgAvatar}><BrandMark size={14} className="text-white" /></div>
           <div className={`${styles.bubble} ${styles.bubbleBot} ${styles.typing}`}>
             <span /><span /><span />
           </div>
@@ -611,7 +611,7 @@ export default function ChatWidget({
         aria-label="Open AI Chat"
         title="Chat with Chatio AI Assistant"
       >
-        <Sparkles className="w-6 h-6 text-white animate-pulse" />
+        <BrandMark size={22} className="text-white" />
         {newMsgAlert && <span className={styles.alertDot} />}
       </button>
 
@@ -635,7 +635,7 @@ export default function ChatWidget({
                     {activeDemo?.id === 'ecommerce' && <ShoppingBag className="w-4 h-4" />}
                     {activeDemo?.id === 'doctor' && <Stethoscope className="w-4 h-4" />}
                     {activeDemo?.id === 'designer' && <Palette className="w-4 h-4" />}
-                    {!activeDemo && <Sparkles className="w-4 h-4" />}
+                    {!activeDemo && <BrandMark size={16} className="text-white" />}
                   </>
                 )}
               </span>

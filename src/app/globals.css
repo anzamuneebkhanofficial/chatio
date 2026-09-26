@@ -1,26 +1,25 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    /* Widget variables for fallback compatibility if needed */
     --accent: #6366f1;
+    --accent-hover: #4f46e5;
     --bg-primary: #080a16;
+    --bg-secondary: #0d1020;
+    --bg-card: #111428;
+    --border-hairline: rgba(255, 255, 255, 0.08);
+  }
+
+  html, body {
+    overflow-x: clip;
   }
 
   body {
     @apply bg-background-primary text-text-primary font-body antialiased;
-    overflow-x: hidden;
-  }
-}
-
-@layer utilities {
-  .gradient-text {
-    background: linear-gradient(135deg, #6366f1, #8b5cf6, #06b6d4);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
   }
 }
 
@@ -33,35 +32,49 @@
 /* Selection */
 ::selection { @apply bg-primary text-white; }
 
-/* Focus Ring */
-:focus-visible { @apply outline-2 outline-primary outline-offset-4; }
+/* Focus Ring — Visible outline for interactive buttons and links, excluding form inputs that manage their own borders */
+:focus-visible:not(input):not(textarea):not(select):not([class*="textarea"]):not([class*="input"]) {
+  outline: 2px solid #6366f1;
+  outline-offset: 2px;
+}
 
 /* ─── Clerk UI Luxury High-Contrast Theme ────────────────────────── */
 .cl-rootBox {
   width: 100% !important;
+  max-width: 440px !important;
+  margin: 0 auto !important;
+  display: flex !important;
+  justify-content: center !important;
 }
 
 .cl-cardBox {
   width: 100% !important;
+  max-width: 440px !important;
+  margin: 0 auto !important;
   display: flex !important;
   justify-content: center !important;
 }
 
 .cl-card {
-  background: rgba(13, 18, 36, 0.98) !important;
-  backdrop-filter: blur(24px) !important;
-  border: 1px solid rgba(99, 102, 241, 0.3) !important;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), 0 0 40px rgba(99, 102, 241, 0.15) !important;
-  border-radius: 1.5rem !important;
+  width: 100% !important;
+  max-width: 400px !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
   color: #ffffff !important;
-  overflow: hidden !important;
-  padding: 2.25rem 2rem !important;
+  overflow: visible !important;
+  padding: 0 !important;
+  margin: 0 auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  box-sizing: border-box !important;
 }
 
 /* Header Spacing & Typography */
 .cl-header {
-  margin-bottom: 1.75rem !important;
-  padding: 0.5rem 0 !important;
+  margin-bottom: 1.5rem !important;
+  padding: 0 !important;
   text-align: center !important;
 }
 
@@ -71,55 +84,62 @@
   font-weight: 700 !important;
   font-size: 1.65rem !important;
   letter-spacing: -0.02em !important;
-  margin-bottom: 0.5rem !important;
+  margin-bottom: 0.35rem !important;
   text-align: center !important;
 }
 
 .cl-headerSubtitle {
   color: #cbd5e1 !important;
-  font-size: 0.925rem !important;
-  line-height: 1.6 !important;
+  font-size: 0.9rem !important;
+  line-height: 1.5 !important;
   text-align: center !important;
   margin-top: 0.25rem !important;
 }
 
 /* Main Form Body Spacing */
 .cl-main {
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 1.5rem !important;
-  padding: 0.5rem 0 !important;
-}
-
-.cl-form {
+  width: 100% !important;
   display: flex !important;
   flex-direction: column !important;
   gap: 1.25rem !important;
+  padding: 0 !important;
+  box-sizing: border-box !important;
+}
+
+.cl-form {
+  width: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 1.15rem !important;
+  box-sizing: border-box !important;
 }
 
 .cl-formField {
-  margin-bottom: 1rem !important;
+  width: 100% !important;
+  margin-bottom: 0.85rem !important;
+  box-sizing: border-box !important;
 }
 
 .cl-formFieldLabel {
   color: #e2e8f0 !important;
   font-weight: 600 !important;
-  font-size: 0.9rem !important;
-  margin-bottom: 0.5rem !important;
+  font-size: 0.88rem !important;
+  margin-bottom: 0.45rem !important;
   display: block !important;
 }
 
-/* Soft Ice-Slate Input Fill (Modern, Non-Glaring, Light Tint) */
+/* Sleek Dark Obsidian Input Fill (Professional, High-End Dark Palette) */
 .cl-formFieldInput {
-  background-color: #f1f5f9 !important;
-  color: #0f172a !important;
-  font-weight: 600 !important;
-  border: 2px solid #cbd5e1 !important;
-  border-radius: 0.85rem !important;
+  background-color: #12162a !important;
+  color: #ffffff !important;
+  font-weight: 500 !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 0.75rem !important;
   padding: 0.85rem 1.15rem !important;
   font-size: 0.95rem !important;
-  transition: all 0.2s ease-in-out !important;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease !important;
   width: 100% !important;
+  box-sizing: border-box !important;
 }
 
 .cl-formFieldInput::placeholder {
@@ -128,9 +148,9 @@
 }
 
 .cl-formFieldInput:focus {
-  background-color: #ffffff !important;
+  background-color: #161b33 !important;
   border-color: #6366f1 !important;
-  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.25) !important;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25) !important;
   outline: none !important;
 }
 
@@ -145,24 +165,23 @@
 }
 
 .cl-otpCodeFieldInput {
-  background-color: #f1f5f9 !important;
-  color: #0f172a !important;
-  font-weight: 800 !important;
+  background-color: #12162a !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
   font-size: 1.4rem !important;
   text-align: center !important;
-  border: 2px solid #cbd5e1 !important;
-  border-radius: 0.85rem !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  border-radius: 0.75rem !important;
   width: 3.25rem !important;
   height: 3.75rem !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25) !important;
   transition: all 0.2s ease !important;
 }
 
 .cl-otpCodeFieldInput:focus {
-  background-color: #ffffff !important;
+  background-color: #161b33 !important;
   border-color: #4f46e5 !important;
-  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.35) !important;
-  transform: translateY(-2px) !important;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.35) !important;
 }
 
 /* Primary Submit Button - Spacious with Margin */
@@ -230,10 +249,10 @@
   text-decoration: underline !important;
 }
 
-/* ─── Footer Area: Clean, High-Contrast & Horizontal ────────────────────────── */
+/* ─── Footer Area: Clean, High-Contrast & Seamless ────────────────────────── */
 .cl-footer {
   background: rgba(255, 255, 255, 0.04) !important;
-  border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
   border-radius: 1rem !important;
   padding: 1.15rem 1.5rem !important;
   margin-top: 1.5rem !important;
@@ -264,30 +283,54 @@
 }
 
 .cl-footerActionLink {
-  color: #a5b4fc !important;
+  color: #818cf8 !important;
   font-weight: 700 !important;
   font-size: 0.9rem !important;
   text-decoration: underline !important;
   text-underline-offset: 4px !important;
-  transition: all 0.2s ease !important;
+  transition: color 0.15s ease !important;
   margin-left: 0.25rem !important;
 }
 
 .cl-footerActionLink:hover {
   color: #ffffff !important;
-  text-shadow: 0 0 12px rgba(165, 180, 252, 0.6) !important;
 }
 
-/* Secured by Clerk & Footer Branding */
+/* "Secured by Clerk" Branding — Brilliant High-Contrast White */
 .cl-footerPages,
+.cl-footerPages *,
 .cl-footerPagesLink,
+.cl-footerPagesLink *,
 .cl-footerPagesLinkText,
+.cl-footerPagesLinkText *,
 .cl-footerItem,
-.cl-footerActionLink {
-  color: #f1f5f9 !important;
-  font-size: 0.85rem !important;
+.cl-footerItem *,
+[class*="footerPages"],
+[class*="footerPages"] *,
+[class*="securedBy"],
+[class*="securedBy"] *,
+a[href*="clerk.com"],
+a[href*="clerk.com"] *,
+a[href*="clerk"] span,
+a[href*="clerk"] p,
+a[href*="clerk"] svg,
+a[href*="clerk"] svg path {
+  color: #ffffff !important;
+  fill: #ffffff !important;
+  font-size: 0.8rem !important;
   font-weight: 600 !important;
   opacity: 1 !important;
+}
+
+.cl-footerPagesLink:hover,
+a[href*="clerk.com"]:hover {
+  color: #a5b4fc !important;
+}
+
+.cl-footer svg,
+.cl-footer svg path {
+  fill: #ffffff !important;
+  color: #ffffff !important;
 }
 
 /* Development mode pill badge */

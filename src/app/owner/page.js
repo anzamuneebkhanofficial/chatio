@@ -6,7 +6,8 @@ import Link from 'next/link';
 import axios from 'axios';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Users, Bot, Database, LogOut, ShieldAlert, Sparkles, Calendar, LayoutDashboard } from 'lucide-react';
+import { Users, Bot, Database, LogOut, ShieldAlert, Calendar, LayoutDashboard, Loader2 } from 'lucide-react';
+import { BrandMark } from '@/components/ui/BrandMark';
 
 export default function MasterOwnerDashboard() {
   const router = useRouter();
@@ -114,7 +115,7 @@ export default function MasterOwnerDashboard() {
     return (
       <main className="min-h-screen bg-background-primary flex items-center justify-center">
         <div className="flex items-center gap-3 text-slate-400">
-          <Sparkles className="w-5 h-5 animate-spin text-indigo-400" />
+          <Loader2 className="w-5 h-5 animate-spin text-indigo-400" />
           <p>Loading Master Owner Dashboard...</p>
         </div>
       </main>
@@ -137,17 +138,19 @@ export default function MasterOwnerDashboard() {
     <main className="min-h-screen bg-background-primary p-6 lg:p-10 text-slate-100">
       <header className="flex justify-between items-center mb-8">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <Sparkles className="w-6 h-6 text-indigo-400" />
-            <h1 className="text-3xl font-display font-bold text-white">
-              Master Owner <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-violet-400">Monitoring</span>
+          <div className="flex items-center gap-2.5 mb-1">
+            <div className="w-7 h-7 rounded-lg bg-indigo-600/90 border border-indigo-400/30 flex items-center justify-center text-white shadow-sm">
+              <BrandMark size={16} className="text-white" />
+            </div>
+            <h1 className="text-3xl font-display font-bold text-white tracking-tight">
+              Master Owner Monitoring
             </h1>
           </div>
           <p className="text-slate-400 text-sm">Platform monitoring & user management for Muhammad Anza Muneeb Khan.</p>
         </div>
         <div className="flex items-center gap-3">
-          <Button href="/admin" variant="primary" size="sm" className="gap-1.5 shadow-md shadow-indigo-500/20">
-            <Sparkles className="w-3.5 h-3.5" /> Train Main Bot (/admin)
+          <Button href="/admin" variant="primary" size="sm" className="gap-1.5 shadow-sm">
+            <Bot className="w-3.5 h-3.5" /> Train Main Bot (/admin)
           </Button>
           <Button href="/" variant="ghost" size="sm" className="border-white/10 text-slate-300">
             Home

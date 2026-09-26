@@ -9,7 +9,7 @@ import axios from 'axios';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card } from '@/components/ui/Card';
-import { ShieldCheck, Mail, Lock, LogIn, ArrowLeft, UserCheck, Sparkles } from 'lucide-react';
+import { ShieldCheck, Mail, Lock, LogIn, ArrowLeft, UserCheck, Loader2 } from 'lucide-react';
 
 export default function AdminLoginPage() {
   const { register, handleSubmit, formState: { isSubmitting } } = useForm();
@@ -91,9 +91,9 @@ export default function AdminLoginPage() {
 
   if (checkingAuth) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background-primary text-slate-400">
+      <div className="min-h-screen flex items-center justify-center bg-[#080a16] text-slate-400">
         <div className="flex items-center gap-3">
-          <Sparkles className="w-5 h-5 animate-spin text-emerald-400" />
+          <Loader2 className="w-5 h-5 animate-spin text-emerald-400" />
           <p className="text-sm">Verifying Owner Session...</p>
         </div>
       </div>
@@ -102,12 +102,8 @@ export default function AdminLoginPage() {
 
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background-primary p-4 relative overflow-hidden text-slate-100">
-      {/* Background ambient glow */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[650px] h-[650px] bg-emerald-600/10 rounded-full blur-[140px] pointer-events-none" />
-      <div className="absolute bottom-10 right-10 w-80 h-80 bg-indigo-600/10 rounded-full blur-[120px] pointer-events-none" />
-
-      <Card className="w-full max-w-md relative z-10 p-8 border-emerald-500/20 bg-[#0d1222]/95 backdrop-blur-2xl shadow-2xl shadow-emerald-950/30 rounded-2xl">
+    <div className="min-h-screen flex items-center justify-center bg-[#080a16] p-4 relative text-slate-100 selection:bg-emerald-600 selection:text-white">
+      <Card className="w-full max-w-md relative z-10 p-8 border border-white/10 bg-[#0d1222] shadow-2xl rounded-2xl">
         <div className="flex items-center justify-between mb-6">
           <Link
             href="/"

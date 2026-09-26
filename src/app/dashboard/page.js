@@ -16,6 +16,7 @@ import {
   Rocket, Copy, Check, Code2, ShoppingBag, Globe, FileCode2, Key,
   Eye, EyeOff, Loader2
 } from 'lucide-react';
+import { BrandMark } from '@/components/ui/BrandMark';
 
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -162,18 +163,17 @@ function UserCrawlForm({ appId, onTrainingSuccess }) {
 
 function UserRawTextForm({ appId, onTrainingSuccess }) {
   const { register, handleSubmit, reset, formState: { isSubmitting } } = useForm();
-  const [textStatus, setTextStatus] = useState(null);
 
   const onSaveText = async (data) => {
     if (!data.text?.trim()) return;
-    setTextStatus('loading');
+    const toastId = toast.loading('Saving knowledge chunk to your bot...');
     try {
       await axios.post('/api/train', { text: data.text, appId });
-      setTextStatus({ ok: true, msg: '✅ Knowledge saved to your bot.' });
+      toast.success('Knowledge saved to your bot.', { id: toastId });
       reset();
       onTrainingSuccess?.();
     } catch (err) {
-      setTextStatus({ ok: false, msg: `❌ ${err.response?.data?.error || err.message}` });
+      toast.error(err.response?.data?.error || err.message, { id: toastId });
     }
   };
 
@@ -186,16 +186,13 @@ function UserRawTextForm({ appId, onTrainingSuccess }) {
         data-gramm="false"
         data-gramm_editor="false"
         data-enable-grammarly="false"
-        className="flex w-full rounded-button border border-white/10 bg-background-primary px-3 py-2 text-sm text-white outline-none focus:ring-2 focus:ring-primary min-h-[120px] mb-4"
+        className="flex w-full rounded-xl border border-white/10 bg-[#0d1020] px-3.5 py-2.5 text-sm text-white placeholder:text-slate-500 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/25 min-h-[130px] mb-4 transition-[border-color,box-shadow]"
         placeholder="Paste FAQs, product descriptions, policies, Markdown..."
         {...register('text', { required: true })}
       />
       <Button id="user-save-text" type="submit" disabled={isSubmitting}>
         {isSubmitting ? 'Saving...' : 'Save to Knowledge Base'}
       </Button>
-      {textStatus && textStatus !== 'loading' && (
-        <p className={`mt-3 text-sm ${textStatus.ok ? 'text-status-success' : 'text-status-error'}`}>{textStatus.msg}</p>
-      )}
     </form>
   );
 }
@@ -221,7 +218,6 @@ export default function UserDashboardPage() {
   const [showMongoUri, setShowMongoUri] = useState(false);
   const [testingDb, setTestingDb] = useState(false);
 
-  const [fileStatus, setFileStatus] = useState(null);
   const [hasCopiedEmbed, setHasCopiedEmbed] = useState(false);
   const fileInputRef = useRef(null);
   const fetchedRef = useRef(false);
@@ -362,16 +358,16 @@ export default function UserDashboardPage() {
 
   const handleFileUpload = async (file) => {
     if (!file) return;
-    setFileStatus('loading');
+    const toastId = toast.loading(`Uploading "${file.name}" to your knowledge base...`);
     const form = new FormData();
     form.append('file', file);
     form.append('appId', appId);
     try {
       await axios.post('/api/train', form);
-      setFileStatus({ ok: true, msg: `✅ Uploaded "${file.name}" to your bot's knowledge base.` });
+      toast.success(`Uploaded "${file.name}" to your bot's knowledge base.`, { id: toastId });
       fetchUserConfig();
     } catch (err) {
-      setFileStatus({ ok: false, msg: `❌ ${err.response?.data?.error || err.message}` });
+      toast.error(err.response?.data?.error || err.message, { id: toastId });
     }
   };
 
@@ -508,8 +504,10 @@ export default function RootLayout({ children }) {
       {/* Sidebar */}
       <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-background-card border-r border-white/5 flex flex-col transition-transform transform lg:translate-x-0 lg:static lg:h-screen ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="h-16 flex items-center justify-between px-6 border-b border-white/5">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-white font-bold text-sm">C</div>
+          <Link href="/" className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-indigo-600/90 border border-indigo-400/30 flex items-center justify-center text-white shadow-sm">
+              <BrandMark size={16} className="text-white" />
+            </div>
             <div>
               <span className="font-display font-bold text-white text-sm">Chatio</span>
               <p className="text-[10px] text-text-secondary tracking-wide">My Dashboard</p>
@@ -557,12 +555,12 @@ export default function RootLayout({ children }) {
             <button className="lg:hidden text-text-secondary" onClick={() => setSidebarOpen(true)}>
               <Menu className="w-6 h-6" />
             </button>
-            <h1 className="text-base font-semibold text-white capitalize">
-              {activeTab === 'embed' ? '🚀 Embed & Deploy' :
-               activeTab === 'storage' ? '🗄️ Database Storage Options' :
-               activeTab === 'ai' ? '🔑 API Keys' :
-               activeTab === 'knowledge' ? '📚 Train Knowledge' :
-               activeTab === 'appearance' ? '🎨 Customize Bot' : '🏠 Overview'}
+            <h1 className="text-base font-semibold text-white">
+              {activeTab === 'embed' ? 'Embed & Deploy' :
+               activeTab === 'storage' ? 'Database Storage & Privacy' :
+               activeTab === 'ai' ? 'API Credentials' :
+               activeTab === 'knowledge' ? 'Knowledge Base Training' :
+               activeTab === 'appearance' ? 'Bot Customization' : 'Overview'}
             </h1>
           </div>
           <div className="flex items-center gap-2 text-xs font-medium px-3 py-1.5 rounded-full bg-status-success/10 text-status-success border border-status-success/20">
@@ -1122,9 +1120,6 @@ export default function RootLayout({ children }) {
                   <Button id="user-upload-file-btn" variant="secondary" onClick={() => fileInputRef.current?.click()}>
                     Choose File to Upload
                   </Button>
-                  {fileStatus && fileStatus !== 'loading' && (
-                    <p className={`mt-3 text-sm ${fileStatus.ok ? 'text-status-success' : 'text-status-error'}`}>{fileStatus.msg}</p>
-                  )}
                 </Card>
 
                 {/* Raw Text */}

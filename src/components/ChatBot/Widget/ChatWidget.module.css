@@ -2,9 +2,9 @@
 
 /* ── Design Tokens ─────────────────────────────────────────────── */
 .root {
-  --cw-bg:          rgba(10, 13, 26, 0.98);
-  --cw-bg2:         #101426;
-  --cw-bg3:         #161b33;
+  --cw-bg:          #080b18; /* 100% solid dark canvas — zero bleed-through */
+  --cw-bg2:         #0c1022; /* 100% solid surface */
+  --cw-bg3:         #121630; /* 100% solid input surface */
   --cw-border:      rgba(255, 255, 255, 0.12);
   --cw-border-accent: rgba(99, 102, 241, 0.4);
   --cw-accent:      #6366f1; /* Royal Indigo */
@@ -87,7 +87,7 @@
   height: var(--cw-h);
   max-height: calc(100dvh - 48px);
   min-height: 540px;
-  background: var(--cw-bg);
+  background: #080b18 !important;
   border: 1px solid var(--cw-border);
   border-radius: var(--cw-radius);
   box-shadow: var(--cw-shadow);
@@ -100,8 +100,6 @@
   opacity: 0;
   pointer-events: none;
   transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
 }
 .panelVisible {
   transform: translateY(-50%) scale(1);
@@ -251,6 +249,7 @@
   /* min-height: 0 is REQUIRED — without it, flex child won't shrink below content size */
   flex: 1 1 0;
   min-height: 0;
+  background: #080b18 !important;
   overflow-y: auto;
   overflow-x: hidden;
   padding: 18px 16px 12px;
@@ -618,9 +617,11 @@
 }
 .textarea {
   flex: 1;
-  background: none;
-  border: none;
-  outline: none;
+  background: transparent !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  -webkit-appearance: none;
   color: var(--cw-text);
   font-size: 13.5px;
   font-family: var(--cw-font);
@@ -633,6 +634,12 @@
   overflow-y: hidden;
   word-break: break-word;
   transition: height 0.15s ease-out;
+}
+.textarea:focus,
+.textarea:focus-visible {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
 }
 .textarea::placeholder {
   color: var(--cw-muted);
